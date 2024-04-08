@@ -470,19 +470,12 @@ namespace WalletConnectSharp.Sign
 
             this.SessionConnectionErrored += (sender, exception) =>
             {
-                logger.Log("Got session_connect event for rpc response");
                 if (approvalTask.Task.IsCompleted)
-                {
-                    logger.Log("approval already received though, skipping");
                     return;
-                }
 
                 if (exception == null)
-                {
                     return;
-                }
-
-                logger.LogError("Got session_connect error " + exception.Message);
+                
                 approvalTask.SetException(exception);
             };
 
@@ -490,13 +483,9 @@ namespace WalletConnectSharp.Sign
             {
                 throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, $"connect() pairing topic: {topic}");
             }
-
-            logger.Log($"Sending request JSON {JsonConvert.SerializeObject(proposal)} to topic {topic}");
-
+            
             var id = await MessageHandler.SendRequest<SessionPropose, SessionProposeResponse>(topic, proposal);
-
-            logger.Log($"Got back {id} as request pending id");
-
+            
             var expiry = Clock.CalculateExpiry(options.Expiry);
 
             await PrivateThis.SetProposal(id, new ProposalStruct()
@@ -614,12 +603,12 @@ namespace WalletConnectSharp.Sign
             if (!string.IsNullOrWhiteSpace(pairingTopic))
                 await this.Client.Core.Pairing.UpdateMetadata(pairingTopic, session.Peer.Metadata);
 
-            if (!string.IsNullOrWhiteSpace(pairingTopic) && id > 0)
+            if (!string.IsNullOrWhiteSpace(pairingTopic) && id != default)
             {
                 await MessageHandler.SendResult<SessionPropose, SessionProposeResponse>(id, pairingTopic,
                     new SessionProposeResponse()
                     {
-                        Relay = new ProtocolOptions() { Protocol = relayProtocol != null ? relayProtocol : "irn" },
+                        Relay = new ProtocolOptions() { Protocol = relayProtocol ?? "irn" },
                         ResponderPublicKey = selfPublicKey
                     });
                 await this.Client.Proposal.Delete(id, Error.FromErrorType(ErrorType.USER_DISCONNECTED));

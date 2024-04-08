@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Newtonsoft.Json;
 using WalletConnectSharp.Common.Events;
 using WalletConnectSharp.Common.Logging;
 using WalletConnectSharp.Common.Model.Errors;
@@ -309,7 +311,11 @@ namespace WalletConnectSharp.Core.Controllers
 
             var method = RpcMethodAttribute.MethodForType<T>();
 
-            var payload = new JsonRpcRequest<T>(method, parameters);
+            using var sha256 = SHA256.Create();
+            var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(parameters)));
+            var messageId = BitConverter.ToInt64(hash, 0);
+
+            var payload = new JsonRpcRequest<T>(method, parameters, messageId);
 
             var message = await this.Core.Crypto.Encode(topic, payload, options);
 

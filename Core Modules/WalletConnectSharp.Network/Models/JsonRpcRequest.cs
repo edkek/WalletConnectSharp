@@ -49,13 +49,13 @@ namespace WalletConnectSharp.Network.Models
         }
 
         [JsonProperty("jsonrpc")]
-        private string _jsonRPC = "2.0";
+        private string _jsonRpc = "2.0";
         
         /// <summary>
         /// The JSON RPC version for this payload
         /// </summary>
         [JsonIgnore]
-        public string JsonRPC => _jsonRPC;
+        public string JsonRPC => _jsonRpc;
         
 
         /// <summary>
@@ -75,10 +75,7 @@ namespace WalletConnectSharp.Network.Models
         /// <param name="id">The id of this new Json rpc request</param>
         public JsonRpcRequest(string method, T param, long? id = null)
         {
-            if (id == null)
-            {
-                id = RpcPayloadId.Generate();
-            }
+            id ??= RpcPayloadId.Generate();
 
             this._method = method;
             this._params = param;
