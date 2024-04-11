@@ -311,10 +311,8 @@ namespace WalletConnectSharp.Core.Controllers
 
             var method = RpcMethodAttribute.MethodForType<T>();
 
-            using var sha256 = SHA256.Create();
-            var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(parameters)));
-            var messageId = BitConverter.ToInt64(hash, 0);
-
+            var messageId = RpcPayloadId.GenerateFromDataHash(parameters);
+            
             var payload = new JsonRpcRequest<T>(method, parameters, messageId);
 
             var message = await this.Core.Crypto.Encode(topic, payload, options);
