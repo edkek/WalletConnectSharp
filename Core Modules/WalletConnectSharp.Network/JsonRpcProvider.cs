@@ -16,7 +16,7 @@ namespace WalletConnectSharp.Network
         private bool _hasRegisteredEventListeners;
         private Guid _context;
         private bool _connectingStarted;
-        private TaskCompletionSource<bool> Connecting = new TaskCompletionSource<bool>();
+        private TaskCompletionSource<bool> _connecting = new();
         private long _lastId;
 
         public event EventHandler<JsonRpcPayload> PayloadReceived;
@@ -35,13 +35,7 @@ namespace WalletConnectSharp.Network
         /// <summary>
         /// Whether the provider is currently connecting or not
         /// </summary>
-        public bool IsConnecting
-        {
-            get
-            {
-                return _connectingStarted && !Connecting.Task.IsCompleted;
-            }
-        }
+        public bool IsConnecting => _connectingStarted && !_connecting.Task.IsCompleted;
 
         /// <summary>
         /// The current Connection for this provider
@@ -103,10 +97,9 @@ namespace WalletConnectSharp.Network
             }
 
             // Reset connecting task
-            Connecting = new TaskCompletionSource<bool>();
+            _connecting = new TaskCompletionSource<bool>();
             _connectingStarted = true;
 
-            WCLogger.Log("[JsonRpcProvider] Opening connection");
             await this._connection.Open(connection);
 
             FinalizeConnection(this._connection);
@@ -121,27 +114,56 @@ namespace WalletConnectSharp.Network
             if (this._connection.Url == connection.Url && connection.Connected) return;
             if (this._connection.Connected)
             {
-                WCLogger.Log("Current connection still open, closing connection");
                 await this._connection.Close();
             }
 
             // Reset connecting task
-            Connecting = new TaskCompletionSource<bool>();
+            _connecting = new TaskCompletionSource<bool>();
             _connectingStarted = true;
 
-            WCLogger.Log("[JsonRpcProvider] Opening connection");
+            void OnConnectionOnOpened(object o, object o1)
+            {
+                _connecting.SetResult(true);
+            }
+
+            void OnConnectionErrored(object o, Exception e)
+            {
+                if (_connecting.Task.IsCompleted)
+                {
+                    return;
+                }
+
+                _connecting.SetException(e);
+            }
+
+            connection.Opened += OnConnectionOnOpened;
+            connection.ErrorReceived += OnConnectionErrored;
+
             await connection.Open();
 
+            try
+            {
+                await _connecting.Task;
+            }
+            catch (Exception)
+            {
+                _connectingStarted = false;
+                throw;
+            }
+            finally
+            {
+                connection.Opened -= OnConnectionOnOpened;
+                connection.ErrorReceived -= OnConnectionErrored;
+            }
+            
             FinalizeConnection(connection);
         }
 
         private void FinalizeConnection(IJsonRpcConnection connection)
         {
-            WCLogger.Log("[JsonRpcProvider] Finalizing Connection, registering event listeners");
             this._connection = connection;
             RegisterEventListeners();
             this.Connected?.Invoke(this, connection);
-            Connecting.SetResult(true);
             _connectingStarted = false;
         }
 
@@ -154,7 +176,6 @@ namespace WalletConnectSharp.Network
             if (_connection == null)
                 throw new Exception("No connection is set");
 
-            WCLogger.Log("[JsonRpcProvider] Connecting with given connection object");
             await Connect(_connection);
         }
 
@@ -165,7 +186,7 @@ namespace WalletConnectSharp.Network
         {
             await _connection.Close();
             // Reset connecting task
-            Connecting = new TaskCompletionSource<bool>();
+            _connecting = new TaskCompletionSource<bool>();
         }
 
         /// <summary>
@@ -181,7 +202,9 @@ namespace WalletConnectSharp.Network
         {
             WCLogger.Log("[JsonRpcProvider] Checking if connected");
             if (IsConnecting)
-                await Connecting.Task;
+            {
+                await _connecting.Task;
+            }
             else if (!_connectingStarted && !_connection.Connected)
             {
                 WCLogger.Log("[JsonRpcProvider] Not connected, connecting now");
@@ -228,13 +251,22 @@ namespace WalletConnectSharp.Network
                 }
             };
 
+            _connection.ErrorReceived += (_, exception) =>
+            {
+                if (requestTask.Task.IsCompleted)
+                {
+                    return;
+                }
+
+                requestTask.SetException(exception);
+            };
+
             _lastId = request.Id;
 
             WCLogger.Log(
                 $"[JsonRpcProvider] Sending request {request.Method} with data {JsonConvert.SerializeObject(request)}");
             await _connection.SendRequest(request, context);
 
-            WCLogger.Log("[JsonRpcProvider] Awaiting request result");
             await requestTask.Task;
 
             return requestTask.Task.Result;
@@ -243,9 +275,7 @@ namespace WalletConnectSharp.Network
         protected void RegisterEventListeners()
         {
             if (_hasRegisteredEventListeners) return;
-
-            WCLogger.Log(
-                $"[JsonRpcProvider] Registering event listeners on connection object with context {_connection.ToString()}");
+            
             _connection.PayloadReceived += OnPayload;
             _connection.Closed += OnConnectionDisconnected;
             _connection.ErrorReceived += OnConnectionError;
@@ -257,8 +287,6 @@ namespace WalletConnectSharp.Network
         {
             if (!_hasRegisteredEventListeners) return;
 
-            WCLogger.Log(
-                $"[JsonRpcProvider] Unregistering event listeners on connection object with context {_connection.ToString()} inside {Context}");
             _connection.PayloadReceived -= OnPayload;
             _connection.Closed -= OnConnectionDisconnected;
             _connection.ErrorReceived -= OnConnectionError;
@@ -278,8 +306,6 @@ namespace WalletConnectSharp.Network
 
         private void OnPayload(object sender, string json)
         {
-            WCLogger.Log($"[JsonRpcProvider] Got payload {json}");
-
             var payload = JsonConvert.DeserializeObject<JsonRpcPayload>(json);
 
             if (payload == null)
@@ -289,9 +315,7 @@ namespace WalletConnectSharp.Network
 
             if (payload.Id == 0)
                 payload.Id = _lastId;
-
-            WCLogger.Log($"[JsonRpcProvider] Payload has ID {payload.Id}");
-
+            
             this.PayloadReceived?.Invoke(this, payload);
 
             if (payload.IsRequest)
@@ -308,7 +332,6 @@ namespace WalletConnectSharp.Network
                 }
                 else
                 {
-                    WCLogger.Log($"Triggering event for ID {payload.Id.ToString()}");
                     _jsonResponseEventHolder.OfType<string>()[payload.Id.ToString()](this, json);
                 }
             }

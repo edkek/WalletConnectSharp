@@ -22,17 +22,19 @@ public abstract class TwoClientsFixture<TClient> where TClient : IDisposable
 
     public virtual async Task DisposeAndReset()
     {
-        if (ClientA != null)
+        if (!Equals(ClientA, default(TClient)))
         {
             ClientA.Dispose();
             ClientA = default;
         }
 
-        if (ClientB != null)
+        if (!Equals(ClientB, default(TClient)))
         {
             ClientB.Dispose();
             ClientB = default;
         }
+
+        await Task.Delay(500);
 
         await Init();
     }

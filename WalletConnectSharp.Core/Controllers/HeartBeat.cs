@@ -71,15 +71,16 @@ namespace WalletConnectSharp.Core.Controllers
                 CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             }
 
+            var token = CancellationTokenSource.Token;
             Task.Run(async () =>
             {
-                while (!CancellationTokenSource.Token.IsCancellationRequested)
+                while (!token.IsCancellationRequested)
                 {
                     Pulse();
 
-                    await Task.Delay(Interval, CancellationTokenSource.Token);
+                    await Task.Delay(Interval, token);
                 }
-            }, CancellationTokenSource.Token);
+            }, token);
 
             return Task.CompletedTask;
         }

@@ -53,10 +53,12 @@ namespace WalletConnectSharp.Core.Controllers
 
         protected bool Disposed;
 
-        private JsonRpcRecord<T, TR>[] _cached = Array.Empty<JsonRpcRecord<T, TR>>();
-        private Dictionary<long, JsonRpcRecord<T, TR>> _records = new Dictionary<long, JsonRpcRecord<T, TR>>();
-        private bool initialized = false;
-        private ICore _core;
+        private readonly Dictionary<long, JsonRpcRecord<T, TR>> _records = new();
+        private readonly object _lock = new();
+        private readonly ICore _core;
+
+        private JsonRpcRecord<T, TR>[] _cached = [];
+        private bool _initialized;
 
         public event EventHandler<JsonRpcRecord<T, TR>> Created;
         public event EventHandler<JsonRpcRecord<T, TR>> Updated;
@@ -131,7 +133,7 @@ namespace WalletConnectSharp.Core.Controllers
         /// <returns></returns>
         public async Task Init()
         {
-            if (!initialized)
+            if (!_initialized)
             {
                 await Restore();
                 foreach (var record in _cached)
@@ -141,7 +143,7 @@ namespace WalletConnectSharp.Core.Controllers
 
                 _cached = Array.Empty<JsonRpcRecord<T, TR>>();
                 RegisterEventListeners();
-                initialized = true;
+                _initialized = true;
             }
         }
 
@@ -155,10 +157,20 @@ namespace WalletConnectSharp.Core.Controllers
         public void Set(string topic, IJsonRpcRequest<T> request, string chainId)
         {
             IsInitialized();
-            if (_records.ContainsKey(request.Id)) return;
 
-            var record = new JsonRpcRecord<T, TR>(request) { Id = request.Id, Topic = topic, ChainId = chainId, };
-            _records.Add(record.Id, record);
+            JsonRpcRecord<T, TR> record;
+
+            lock (_lock)
+            {
+                if (_records.ContainsKey(request.Id))
+                {
+                    return;
+                }
+
+                record = new JsonRpcRecord<T, TR>(request) { Id = request.Id, Topic = topic, ChainId = chainId };
+                _records.Add(record.Id, record);
+            }
+   
             this.Created?.Invoke(this, record);
         }
 
@@ -208,7 +220,7 @@ namespace WalletConnectSharp.Core.Controllers
         /// </summary>
         /// <param name="topic">The topic the request was made in</param>
         /// <param name="id">The id of the request. If no id is given then all requests in the given topic are deleted.</param>
-        public void Delete(string topic, long? id)
+        public void Delete(string topic, long? id = null)
         {
             IsInitialized();
 
@@ -308,7 +320,7 @@ namespace WalletConnectSharp.Core.Controllers
 
         private void IsInitialized()
         {
-            if (!initialized)
+            if (!_initialized)
             {
                 throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
             }

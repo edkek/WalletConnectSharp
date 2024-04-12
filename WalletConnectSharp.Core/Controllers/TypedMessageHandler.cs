@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Newtonsoft.Json;
 using WalletConnectSharp.Common.Events;
-using WalletConnectSharp.Common.Logging;
 using WalletConnectSharp.Common.Model.Errors;
 using WalletConnectSharp.Common.Utils;
 using WalletConnectSharp.Core.Interfaces;
@@ -97,7 +98,10 @@ namespace WalletConnectSharp.Core.Controllers
 
             async void RequestCallback(object sender, MessageEvent e)
             {
-                if (requestCallback == null) return;
+                if (requestCallback == null || Disposed)
+                {
+                    return;
+                }
 
                 var topic = e.Topic;
                 var message = e.Message;
@@ -115,7 +119,10 @@ namespace WalletConnectSharp.Core.Controllers
 
             async void ResponseCallback(object sender, MessageEvent e)
             {
-                if (responseCallback == null) return;
+                if (responseCallback == null || Disposed)
+                {
+                    return;
+                }
 
                 var topic = e.Topic;
                 var message = e.Message;
@@ -309,7 +316,9 @@ namespace WalletConnectSharp.Core.Controllers
 
             var method = RpcMethodAttribute.MethodForType<T>();
 
-            var payload = new JsonRpcRequest<T>(method, parameters);
+            var messageId = RpcPayloadId.GenerateFromDataHash(parameters);
+            
+            var payload = new JsonRpcRequest<T>(method, parameters, messageId);
 
             var message = await this.Core.Crypto.Encode(topic, payload, options);
 
@@ -322,11 +331,7 @@ namespace WalletConnectSharp.Core.Controllers
 
             (await this.Core.History.JsonRpcHistoryOfType<T, TR>()).Set(topic, payload, null);
 
-            // await is intentionally omitted here because of a possible race condition
-            // where a response is received before the publish call is resolved
-#pragma warning disable CS4014
-            this.Core.Relayer.Publish(topic, message, opts);
-#pragma warning restore CS4014
+            await Core.Relayer.Publish(topic, message, opts);
 
             return payload.Id;
         }

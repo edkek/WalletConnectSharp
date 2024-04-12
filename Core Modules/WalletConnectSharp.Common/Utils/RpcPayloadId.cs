@@ -1,3 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
+using Newtonsoft.Json;
+
 namespace WalletConnectSharp.Common.Utils;
 
 /// <summary>
@@ -18,5 +22,23 @@ public static class RpcPayloadId
         var date = (long)((DateTime.UtcNow - UnixEpoch).TotalMilliseconds) * (10L * 10L * 10L);
         var extra = (long)Math.Floor(rng.NextDouble() * (10.0 * 10.0 * 10.0));
         return date + extra;
+    }
+
+    public static long GenerateFromDataHash(object data)
+    {
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data)));
+
+        // Take the first 6 bytes to stay within JavaScript's safe integer range
+        long id = 0;
+        for (var i = 0; i < 6; i++)
+        {
+            id = (id << 8) | hash[i];
+        }
+
+        // Ensure the id is positive
+        id &= 0x7FFFFFFFFFFFFF;
+
+        return id;
     }
 }

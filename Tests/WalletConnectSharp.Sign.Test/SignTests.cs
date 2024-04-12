@@ -582,13 +582,13 @@ namespace WalletConnectSharp.Sign.Test
             _cryptoFixture.StorageOverrideA = _cryptoFixture.ClientA.Core.Storage;
             _cryptoFixture.StorageOverrideB = _cryptoFixture.ClientB.Core.Storage;
 
-            await Task.Delay(100);
+            await Task.Delay(500);
             
             await _cryptoFixture.DisposeAndReset();
             
             _testOutputHelper.WriteLine(string.Join(",", _cryptoFixture.ClientB.Core.Crypto.KeyChain.Keychain.Values));
 
-            await Task.Delay(100);
+            await Task.Delay(500);
 
             var reloadedDefaultSessionTopic = _cryptoFixture.ClientA.AddressProvider.DefaultSession.Topic;
             

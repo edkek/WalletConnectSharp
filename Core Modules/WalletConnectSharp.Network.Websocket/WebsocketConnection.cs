@@ -71,13 +71,7 @@ namespace WalletConnectSharp.Network.Websocket
         /// <summary>
         /// Whether this websocket connection is connected
         /// </summary>
-        public bool Connected
-        {
-            get
-            {
-                return _socket != null;
-            }
-        }
+        public bool Connected => _socket != null && _socket.NativeClient.State == WebSocketState.Open;
 
         /// <summary>
         /// Whether this websocket connection is currently connecting
