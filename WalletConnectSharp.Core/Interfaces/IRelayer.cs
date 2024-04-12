@@ -123,7 +123,7 @@ namespace WalletConnectSharp.Core.Interfaces
 
         public Task TransportOpen(string relayUrl = null);
 
-        public Task RestartTransport(string relayUrl = null);
+        public Task RestartTransport(string relayUrl = null, CancellationToken cancellationToken = default);
 
         internal void TriggerConnectionStalled();
     }

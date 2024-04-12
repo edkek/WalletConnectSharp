@@ -180,7 +180,7 @@ public partial class AuthEngine : IAuthEngine
         var responseTopic = this.Client.Core.Crypto.HashKey(receiverPublicKey);
         var encodeOptions = new EncodeOptions()
         {
-            Type = Crypto.Crypto.TYPE_1, ReceiverPublicKey = receiverPublicKey, SenderPublicKey = senderPublicKey
+            Type = Crypto.Crypto.Type1, ReceiverPublicKey = receiverPublicKey, SenderPublicKey = senderPublicKey
         };
 
         Cacao cacao;

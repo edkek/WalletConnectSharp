@@ -119,8 +119,8 @@ namespace WalletConnectSharp.Core.Controllers
             }
         }
 
+        private readonly string projectId;
         private string relayUrl;
-        private string projectId;
         private bool initialized;
         private bool reconnecting = false;
         protected bool Disposed;
@@ -209,45 +209,6 @@ namespace WalletConnectSharp.Core.Controllers
             Provider.Connected += OnProviderConnected;
             Provider.Disconnected += OnProviderDisconnected;
             Provider.ErrorReceived += OnProviderErrorReceived;
-            
-            Core.HeartBeat.OnPulse += HeartBeatOnOnPulse;
-        }
-
-        private async void HeartBeatOnOnPulse(object sender, EventArgs e)
-        {
-            var interval = this.MessageFetchInterval;
-            if (interval == null) return;
-            
-            var topics = Subscriber.Topics;
-            if (topics.Length <= 0 || isSyncing || !(DateTime.Now - lastSyncTime >= interval)) return;
-
-            isSyncing = true;
-            bool hasMore;
-            do
-            {
-                var request = new BatchFetchMessageRequest()
-                {
-                    Topics = topics
-                };
-
-                var response =
-                    await Request<BatchFetchMessageRequest, BatchFetchMessagesResponse>(new RequestArguments<BatchFetchMessageRequest>()
-                    {
-                        Method = "irn_batchFetchMessages",
-                        Params = request
-                    });
-
-                if (response?.Messages == null)
-                    break;
-
-                await Task.WhenAll(response.Messages.Select(message => new MessageEvent() { Message = message.Message, Topic = message.Topic })
-                    .Select(OnMessageEvent));
-
-                hasMore = response.HasMore;
-            } while (hasMore);
-
-            isSyncing = false;
-            lastSyncTime = DateTime.Now;
         }
 
         private void OnProviderErrorReceived(object sender, Exception e)
@@ -403,13 +364,21 @@ namespace WalletConnectSharp.Core.Controllers
             return Subscriber.Unsubscribe(topic, opts);
         }
 
+        /// <summary>
+        /// Send a Json RPC request with a parameter field of type T, and decode a response with the type of TR.
+        /// </summary>
+        /// <param name="request">The json rpc request to send</param>
+        /// <param name="context">The current context</param>
+        /// <typeparam name="T">The type of the parameter field in the json rpc request</typeparam>
+        /// <typeparam name="TR">The type of the parameter field in the json rpc response</typeparam>
+        /// <returns>The decoded response for the request</returns>
         public async Task<TR> Request<T, TR>(IRequestArguments<T> request, object context = null)
         {
             WCLogger.Log("[Relayer] Checking for established connection");
-            await this.ToEstablishConnection();
+            await ToEstablishConnection();
 
             WCLogger.Log("[Relayer] Sending request through provider");
-            var result = await this.Provider.Request<T, TR>(request, context);
+            var result = await Provider.Request<T, TR>(request, context);
 
             return result;
         }
@@ -487,9 +456,15 @@ namespace WalletConnectSharp.Core.Controllers
             }
         }
 
-        public async Task RestartTransport(string relayUrl = null)
+        public async Task RestartTransport(string relayUrl = null, CancellationToken cancellationToken = default)
         {
-            if (this._transportExplicitlyClosed || this.reconnecting) return;
+            WCLogger.Log($"[Relayer] Restarting transport for {Name}. Explicitly closed: {_transportExplicitlyClosed}, reconnecting: {reconnecting}");
+
+            if (_transportExplicitlyClosed || reconnecting)
+            {
+                return;
+            }
+
             this.relayUrl = relayUrl ?? this.relayUrl;
             if (this.Connected)
             {
@@ -499,7 +474,7 @@ namespace WalletConnectSharp.Core.Controllers
                     h => this.Provider.Disconnected += h,
                     h => this.Provider.Disconnected -= h);
 
-                await Task.WhenAll(task1.Task, this.TransportClose());
+                await Task.WhenAll(task1.Task, TransportClose());
             }
 
             await CreateProvider();
@@ -519,14 +494,14 @@ namespace WalletConnectSharp.Core.Controllers
             }
         }
 
-        private async Task ToEstablishConnection()
+        private async Task ToEstablishConnection(CancellationToken cancellationToken = default)
         {
             if (Connected)
             {
-                while (Provider.Connection.IsPaused)
+                while (Provider.Connection.IsPaused && !Disposed)
                 {
                     WCLogger.Log("[Relayer] Waiting for connection to unpause");
-                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
 
                 return;
@@ -535,10 +510,10 @@ namespace WalletConnectSharp.Core.Controllers
             if (Connecting)
             {
                 // Check for connection
-                while (Connecting)
+                while (Connecting && !Disposed)
                 {
                     WCLogger.Log("[Relayer] Waiting for connection to open");
-                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
 
                 if (!Connected && !Connecting)
@@ -547,8 +522,7 @@ namespace WalletConnectSharp.Core.Controllers
                 return;
             }
 
-            WCLogger.Log("[Relayer] Restarting transport");
-            await this.RestartTransport();
+            await RestartTransport(cancellationToken: cancellationToken);
         }
 
         public void Dispose()
@@ -575,8 +549,6 @@ namespace WalletConnectSharp.Core.Controllers
                 Provider.Disconnected -= OnProviderDisconnected;
                 Provider.RawMessageReceived -= OnProviderRawMessageReceived;
                 Provider.ErrorReceived -= OnProviderErrorReceived;
-
-                Core.HeartBeat.OnPulse -= HeartBeatOnOnPulse;
                 
                 Provider?.Dispose();
             }

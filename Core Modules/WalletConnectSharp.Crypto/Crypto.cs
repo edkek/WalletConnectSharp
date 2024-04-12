@@ -29,25 +29,22 @@ namespace WalletConnectSharp.Crypto
     /// </summary>
     public class Crypto : ICrypto
     {
-        private readonly string CRYPTO_CLIENT_SEED = $"client_ed25519_seed";
+        private const string CryptoClientSeed = $"client_ed25519_seed";
+        private const string MulticodecEd25519Base = "z";
+        private const string MulticodecEd25519Header = "K36";
+        private const string DidDelimiter = ":";
+        private const string DidPrefix = "did";
+        private const string DidMethod = "key";
+        private const long CryptoJwtTtl = Clock.ONE_DAY;
+        private const string JwtDelimiter = ".";
+        private static readonly Encoding DataEncoding = Encoding.UTF8;
+        private static readonly Encoding JsonEncoding = Encoding.UTF8;
 
-        private const string MULTICODEC_ED25519_ENCODING = "base58btc";
-        private const string MULTICODEC_ED25519_BASE = "z";
-        private const string MULTICODEC_ED25519_HEADER = "K36";
-        private const int MULTICODEC_ED25519_LENGTH = 32;
-        private const string DID_DELIMITER = ":";
-        private const string DID_PREFIX = "did";
-        private const string DID_METHOD = "key";
-        private const long CRYPTO_JWT_TTL = Clock.ONE_DAY;
-        private const string JWT_DELIMITER = ".";
-        private static readonly Encoding DATA_ENCODING = Encoding.UTF8;
-        private static readonly Encoding JSON_ENCODING = Encoding.UTF8;
-
-        public const int TYPE_0 = 0;
-        public const int TYPE_1 = 1;
-        private const int TYPE_LENGTH = 1;
-        private const int IV_LENGTH = 12;
-        private const int KEY_LENGTH = 32;
+        public const int Type0 = 0;
+        public const int Type1 = 1;
+        private const int TypeLength = 1;
+        private const int IvLength = 12;
+        private const int KeyLength = 32;
 
         /// <summary>
         /// The name of the crypto module
@@ -232,8 +229,8 @@ namespace WalletConnectSharp.Crypto
 
         private EncodingValidation ValidateEncoding(EncodeOptions options)
         {
-            var type = options?.Type ?? TYPE_0;
-            if (type == TYPE_1)
+            var type = options?.Type ?? Type0;
+            if (type == Type1)
             {
                 if (options == null || string.IsNullOrWhiteSpace(options.SenderPublicKey))
                 {
@@ -267,7 +264,7 @@ namespace WalletConnectSharp.Crypto
 
         private bool IsTypeOneEnvelope(EncodingValidation param)
         {
-            return param.Type == TYPE_1 && !string.IsNullOrWhiteSpace(param.SenderPublicKey) &&
+            return param.Type == Type1 && !string.IsNullOrWhiteSpace(param.SenderPublicKey) &&
                    !string.IsNullOrWhiteSpace(param.ReceiverPublicKey);
         }
 
@@ -294,7 +291,7 @@ namespace WalletConnectSharp.Crypto
                 rawIv = iv.HexToByteArray();
             }
 
-            var type1 = @params.Type == TYPE_1;
+            var type1 = @params.Type == Type1;
             var senderPublicKey = !string.IsNullOrWhiteSpace(@params.SenderPublicKey)
                 ? @params.SenderPublicKey.HexToByteArray()
                 : null;
@@ -419,18 +416,18 @@ namespace WalletConnectSharp.Crypto
         private EncodingParams Deserialize(string encoded)
         {
             var bytes = Convert.FromBase64String(encoded);
-            var typeRaw = bytes.Take(TYPE_LENGTH).ToArray();
-            var slice1 = TYPE_LENGTH;
+            var typeRaw = bytes.Take(TypeLength).ToArray();
+            var slice1 = TypeLength;
 
             var type = int.Parse(Bases.Base10.Encode(typeRaw));
-            if (type == TYPE_1)
+            if (type == Type1)
             {
-                var slice2 = slice1 + KEY_LENGTH;
-                var slice3 = slice2 + IV_LENGTH;
-                var senderPublicKey = new ArraySegment<byte>(bytes, slice1, KEY_LENGTH);
-                var iv = new ArraySegment<byte>(bytes, slice2, IV_LENGTH);
+                var slice2 = slice1 + KeyLength;
+                var slice3 = slice2 + IvLength;
+                var senderPublicKey = new ArraySegment<byte>(bytes, slice1, KeyLength);
+                var iv = new ArraySegment<byte>(bytes, slice2, IvLength);
                 var @sealed =
-                    new ArraySegment<byte>(bytes, slice3, bytes.Length - (TYPE_LENGTH + KEY_LENGTH + IV_LENGTH));
+                    new ArraySegment<byte>(bytes, slice3, bytes.Length - (TypeLength + KeyLength + IvLength));
 
                 return new EncodingParams()
                 {
@@ -442,9 +439,9 @@ namespace WalletConnectSharp.Crypto
             }
             else
             {
-                var slice2 = slice1 + IV_LENGTH;
-                var iv = new ArraySegment<byte>(bytes, slice1, IV_LENGTH);
-                var @sealed = new ArraySegment<byte>(bytes, slice2, bytes.Length - (IV_LENGTH + TYPE_LENGTH));
+                var slice2 = slice1 + IvLength;
+                var iv = new ArraySegment<byte>(bytes, slice1, IvLength);
+                var @sealed = new ArraySegment<byte>(bytes, slice2, bytes.Length - (IvLength + TypeLength));
 
                 return new EncodingParams() { Type = typeRaw, Sealed = @sealed.ToArray(), Iv = iv.ToArray() };
             }
@@ -463,7 +460,7 @@ namespace WalletConnectSharp.Crypto
             byte[] subRaw = new byte[32];
             RandomNumberGenerator.Fill(subRaw);
             var sub = subRaw.ToHex();
-            var ttl = CRYPTO_JWT_TTL;
+            var ttl = CryptoJwtTtl;
             var iat = Clock.Now();
 
             // sign JWT
@@ -479,8 +476,8 @@ namespace WalletConnectSharp.Crypto
                 Exp = exp
             };
 
-            var data = DATA_ENCODING.GetBytes(
-                string.Join(JWT_DELIMITER, EncodeJson(header), EncodeJson(payload))
+            var data = DataEncoding.GetBytes(
+                string.Join(JwtDelimiter, EncodeJson(header), EncodeJson(payload))
             );
 
             Ed25519Signer signer = new Ed25519Signer();
@@ -506,7 +503,7 @@ namespace WalletConnectSharp.Crypto
 
         private string EncodeJwt(IridiumJWTSigned data)
         {
-            return string.Join(JWT_DELIMITER,
+            return string.Join(JwtDelimiter,
                 EncodeJson(data.Header),
                 EncodeJson(data.Payload),
                 EncodeSig(data.Signature)
@@ -521,7 +518,7 @@ namespace WalletConnectSharp.Crypto
         private string EncodeJson<T>(T data)
         {
             return Base64UrlEncoder.Encode(
-                JSON_ENCODING.GetBytes(
+                JsonEncoding.GetBytes(
                     JsonConvert.SerializeObject(data)
                 )
             );
@@ -530,10 +527,10 @@ namespace WalletConnectSharp.Crypto
         private string EncodeIss(Ed25519PublicKeyParameters publicKey)
         {
             var publicKeyRaw = publicKey.GetEncoded();
-            var header = Base58Encoding.Decode(MULTICODEC_ED25519_HEADER);
-            var multicodec = MULTICODEC_ED25519_BASE + Base58Encoding.Encode(header.Concat(publicKeyRaw).ToArray());
+            var header = Base58Encoding.Decode(MulticodecEd25519Header);
+            var multicodec = MulticodecEd25519Base + Base58Encoding.Encode(header.Concat(publicKeyRaw).ToArray());
 
-            return string.Join(DID_DELIMITER, DID_PREFIX, DID_METHOD, multicodec);
+            return string.Join(DidDelimiter, DidPrefix, DidMethod, multicodec);
         }
 
         private Ed25519PrivateKeyParameters KeypairFromSeed(byte[] seed)
@@ -631,7 +628,7 @@ namespace WalletConnectSharp.Crypto
             var @sealed = param.Sealed;
             var iv = param.Iv;
             var type = int.Parse(Bases.Base10.Encode(param.Type));
-            var isType1 = type == TYPE_1;
+            var isType1 = type == Type1;
 
             var aead = new ChaCha20Poly1305();
             aead.Init(false, new ParametersWithIV(new KeyParameter(symKey.HexToByteArray()), iv));
@@ -660,14 +657,14 @@ namespace WalletConnectSharp.Crypto
             var seed = "";
             try
             {
-                seed = await this.KeyChain.Get(CRYPTO_CLIENT_SEED);
+                seed = await KeyChain.Get(CryptoClientSeed);
             }
             catch (Exception e)
             {
                 byte[] seedRaw = new byte[32];
                 RandomNumberGenerator.Fill(seedRaw);
                 seed = seedRaw.ToHex();
-                await this.KeyChain.Set(CRYPTO_CLIENT_SEED, seed);
+                await KeyChain.Set(CryptoClientSeed, seed);
             }
 
             return seed.HexToByteArray();

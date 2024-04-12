@@ -183,9 +183,16 @@ namespace WalletConnectSharp.Core.Controllers
         private async Task Restart()
         {
             this.restartTask = new TaskCompletionSource<bool>();
-            await Restore();
-            await Reset();
-            this.restartTask.SetResult(true);
+            try
+            {
+                await Restore();
+                await Reset();
+                restartTask.SetResult(true);
+            }
+            catch (Exception e)
+            {
+                restartTask.SetException(e);
+            }
         }
 
         protected virtual void RegisterEventListeners()

@@ -41,9 +41,6 @@ namespace WalletConnectSharp.Core.Controllers
             }
         }
 
-        private readonly object _queueLock = new object();
-        protected Dictionary<string, PublishParams> queue = new Dictionary<string, PublishParams>();
-
         /// <summary>
         /// Create a new Publisher that uses the given IRelayer to publish messages to
         /// </summary>
@@ -51,64 +48,12 @@ namespace WalletConnectSharp.Core.Controllers
         public Publisher(IRelayer relayer)
         {
             Relayer = relayer;
-            
-            RegisterEventListeners();
         }
 
-        private void RegisterEventListeners()
+        protected Task RpcPublish(string topic, string message, long ttl, long tag, ProtocolOptions relay,
+            CancellationToken cancellationToken = default)
         {
-            Relayer.Core.HeartBeat.OnPulse += (_, _) => CheckQueue();
-        }
-
-        private async void CheckQueue()
-        {
-            List<PublishParams> temp = new List<PublishParams>();
-            lock (_queueLock)
-            {
-                var keys = queue.Keys.ToArray();
-
-                foreach (var key in keys)
-                {
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(key)) continue;
-                        if (!queue.ContainsKey(key)) continue;
-                        var @params = queue[key];
-
-                        temp.Add(@params);
-                        
-                        var hash = HashUtils.HashMessage(@params.Message);
-                        this.queue.Remove(hash);
-                    }
-                    catch (KeyNotFoundException)
-                    {
-                        // ignore ..
-                    }
-                }
-            }
-
-            foreach (var @params in temp)
-            {
-                var hash = HashUtils.HashMessage(@params.Message);
-                await RpcPublish(@params.Topic, @params.Message, @params.Options.TTL, @params.Options.Tag,
-                    @params.Options.Relay);
-                this.OnPublishedMessage?.Invoke(this, @params);
-                OnPublish(hash);
-            }
-        }
-
-        private void OnPublish(string hash)
-        {
-            lock (_queueLock)
-            {
-                if (!this.queue.ContainsKey(hash)) return;
-                
-                this.queue.Remove(hash);
-            }
-        }
-
-        protected Task RpcPublish(string topic, string message, long ttl, long tag, ProtocolOptions relay)
-        {
+            cancellationToken.ThrowIfCancellationRequested();
             var api = RelayProtocols.GetRelayProtocol(relay.Protocol);
             var request = new RequestArguments<RelayPublishRequest>()
             {
@@ -122,9 +67,9 @@ namespace WalletConnectSharp.Core.Controllers
                 }
             };
 
-            return this.Relayer.Request<RelayPublishRequest, object>(request, this);
+            return Relayer.Request<RelayPublishRequest, object>(request, this);
         }
-
+        
         /// <summary>
         /// Publish a messages to the given topic, optionally specifying publish options.
         /// </summary>
@@ -135,9 +80,9 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (opts == null)
             {
-                opts = new PublishOptions()
+                opts = new PublishOptions
                 {
-                    Relay = new ProtocolOptions()
+                    Relay = new ProtocolOptions
                     {
                         Protocol = RelayProtocols.Default
                     },
@@ -147,13 +92,7 @@ namespace WalletConnectSharp.Core.Controllers
             }
             else
             {
-                if (opts.Relay == null)
-                {
-                    opts.Relay = new ProtocolOptions()
-                    {
-                        Protocol = RelayProtocols.Default
-                    };
-                }
+                opts.Relay ??= new ProtocolOptions { Protocol = RelayProtocols.Default };
             }
 
             var @params = new PublishParams()
@@ -163,24 +102,23 @@ namespace WalletConnectSharp.Core.Controllers
                 Topic = topic
             };
 
-            var hash = HashUtils.HashMessage(message);
-            lock (_queueLock)
-            {
-                queue.Add(hash, @params);
-            }
+            await Publish(@params);
+        }
 
-            try
-            {
-                await RpcPublish(topic, message, @params.Options.TTL, @params.Options.Tag, @params.Options.Relay)
-                    .WithTimeout(TimeSpan.FromSeconds(45));
-                this.OnPublishedMessage?.Invoke(this, @params);
-                OnPublish(hash);
-            }
-            catch (Exception e)
-            {
-                this.Relayer.TriggerConnectionStalled();
-                return;
-            }
+        /// <summary>
+        /// Publish a messages to the given topic, optionally specifying publish options.
+        /// </summary>
+        /// <param name="params">Parameters to publish</param>
+        public async Task Publish(PublishParams @params)
+        {
+            await RpcPublish(
+                @params.Topic,
+                @params.Message,
+                @params.Options.TTL,
+                @params.Options.Tag,
+                @params.Options.Relay);
+
+            OnPublishedMessage?.Invoke(this, @params);
         }
 
         public void Dispose()
