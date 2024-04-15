@@ -416,7 +416,7 @@ namespace WalletConnectSharp.Sign
             var sessionProperties = options.SessionProperties;
             var relays = options.Relays;
             var topic = options.PairingTopic;
-            string uri = "";
+            var uri = string.Empty;
             var active = false;
 
             if (!string.IsNullOrEmpty(topic))
@@ -428,9 +428,9 @@ namespace WalletConnectSharp.Sign
 
             if (string.IsNullOrEmpty(topic) || !active)
             {
-                var CreatePairing = await this.Client.Core.Pairing.Create();
-                topic = CreatePairing.Topic;
-                uri = CreatePairing.Uri;
+                var newPairing = await Client.Core.Pairing.Create();
+                topic = newPairing.Topic;
+                uri = newPairing.Uri;
             }
 
             var publicKey = await this.Client.Core.Crypto.GenerateKeyPair();
@@ -438,54 +438,25 @@ namespace WalletConnectSharp.Sign
             {
                 RequiredNamespaces = requiredNamespaces,
                 Relays = relays != null
-                    ? new[] { relays }
-                    : new[] { new ProtocolOptions() { Protocol = RelayProtocols.Default } },
+                    ? [relays]
+                    : [new ProtocolOptions() { Protocol = RelayProtocols.Default }],
                 Proposer = new Participant() { PublicKey = publicKey, Metadata = this.Client.Metadata },
                 OptionalNamespaces = optionalNamespaces,
                 SessionProperties = sessionProperties,
             };
 
             TaskCompletionSource<SessionStruct> approvalTask = new TaskCompletionSource<SessionStruct>();
-            this.SessionConnected += async (sender, session) =>
-            {
-                logger.Log("Got session_connect event for session struct");
-                if (approvalTask.Task.IsCompleted)
-                {
-                    logger.Log("approval already received though, skipping");
-                    return;
-                }
 
-                session.Self.PublicKey = publicKey;
-                var completeSession = session with { RequiredNamespaces = requiredNamespaces };
-                await PrivateThis.SetExpiry(session.Topic, session.Expiry.Value);
-                await Client.Session.Set(session.Topic, completeSession);
-
-                if (!string.IsNullOrWhiteSpace(topic))
-                {
-                    await this.Client.Core.Pairing.UpdateMetadata(topic, session.Peer.Metadata);
-                }
-
-                approvalTask.SetResult(completeSession);
-            };
-
-            this.SessionConnectionErrored += (sender, exception) =>
-            {
-                if (approvalTask.Task.IsCompleted)
-                    return;
-
-                if (exception == null)
-                    return;
-                
-                approvalTask.SetException(exception);
-            };
+            SessionConnected += OnSessionConnected;
+            SessionConnectionErrored += OnSessionConnectionErrored;
 
             if (string.IsNullOrWhiteSpace(topic))
             {
                 throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, $"connect() pairing topic: {topic}");
             }
-            
+
             var id = await MessageHandler.SendRequest<SessionPropose, SessionProposeResponse>(topic, proposal);
-            
+
             var expiry = Clock.CalculateExpiry(options.Expiry);
 
             await PrivateThis.SetProposal(id, new ProposalStruct()
@@ -496,10 +467,56 @@ namespace WalletConnectSharp.Sign
                 Relays = proposal.Relays,
                 RequiredNamespaces = proposal.RequiredNamespaces,
                 OptionalNamespaces = proposal.OptionalNamespaces,
-                SessionProperties = proposal.SessionProperties,
+                SessionProperties = proposal.SessionProperties
             });
 
-            return new ConnectedData() { Uri = uri, Approval = approvalTask.Task };
+            return new ConnectedData(uri, topic, approvalTask.Task);
+
+            async void OnSessionConnected(object sender, SessionStruct session)
+            {
+                if (session.PairingTopic != topic)
+                {
+                    return;
+                }
+
+                if (approvalTask.Task.IsCompleted)
+                {
+                    return;
+                }
+
+                session.Self.PublicKey = publicKey;
+                var completeSession = session with { RequiredNamespaces = requiredNamespaces };
+                await PrivateThis.SetExpiry(session.Topic, session.Expiry.Value);
+                await Client.Session.Set(session.Topic, completeSession);
+
+                if (!string.IsNullOrWhiteSpace(topic))
+                {
+                    await Client.Core.Pairing.UpdateMetadata(topic, session.Peer.Metadata);
+                }
+
+                SessionConnected -= OnSessionConnected;
+                SessionConnectionErrored -= OnSessionConnectionErrored;
+
+                approvalTask.SetResult(completeSession);
+            }
+
+            void OnSessionConnectionErrored(object sender, Exception exception)
+            {
+                if (approvalTask.Task.IsCompleted)
+                {
+                    return;
+                }
+
+                if (exception == null)
+                {
+                    return;
+                }
+
+                SessionConnected -= OnSessionConnected;
+                SessionConnectionErrored -= OnSessionConnectionErrored;
+
+                approvalTask.SetException(exception);
+            }
         }
 
         /// <summary>
@@ -569,7 +586,8 @@ namespace WalletConnectSharp.Sign
                 Relay = new ProtocolOptions() { Protocol = relayProtocol ?? "irn" },
                 Namespaces = namespaces,
                 Controller = new Participant() { PublicKey = selfPublicKey, Metadata = this.Client.Metadata },
-                Expiry = Clock.CalculateExpiry(SessionExpiry)
+                Expiry = Clock.CalculateExpiry(SessionExpiry),
+                PairingTopic = pairingTopic
             };
 
             await this.Client.Core.Relayer.Subscribe(sessionTopic);
@@ -595,6 +613,7 @@ namespace WalletConnectSharp.Sign
                 Expiry = sessionSettle.Expiry,
                 Namespaces = sessionSettle.Namespaces,
                 Relay = sessionSettle.Relay,
+                PairingTopic = pairingTopic,
                 RequiredNamespaces = requiredNamespaces,
             };
 
