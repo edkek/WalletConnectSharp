@@ -474,7 +474,7 @@ namespace WalletConnectSharp.Sign
 
             async void OnSessionConnected(object sender, SessionStruct session)
             {
-                if (session.PairingTopic != topic)
+                if (!string.IsNullOrWhiteSpace(session.PairingTopic) && session.PairingTopic != topic)
                 {
                     return;
                 }
