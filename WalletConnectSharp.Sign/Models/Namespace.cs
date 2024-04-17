@@ -72,12 +72,12 @@ namespace WalletConnectSharp.Sign.Models
             return this;
         }
 
-        protected static bool ArrayEquals(string[] a, string[] b)
+        private static bool ArrayEquals(string[] a, string[] b)
         {
-            return a.Length == b.Length && a.All(b.Contains) && b.All(a.Contains);
+            return a.Length == b.Length && Array.TrueForAll(a, b.Contains) && Array.TrueForAll(b, a.Contains);
         }
 
-        protected bool Equals(Namespace other)
+        private bool Equals(Namespace other)
         {
             return ArrayEquals(Accounts, other.Accounts) && ArrayEquals(Methods, other.Methods) &&
                    ArrayEquals(Events, other.Events);
@@ -106,6 +106,41 @@ namespace WalletConnectSharp.Sign.Models
         public override int GetHashCode()
         {
             return HashCode.Combine(Accounts, Methods, Events);
+        }
+
+        public bool TryGetChains(out string[] chainIds)
+        {
+            if (Chains is { Length: 0 })
+            {
+                chainIds = Chains;
+                return true;
+            }
+
+            HashSet<string> chainSet = [];
+            foreach (var account in Accounts)
+            {
+                var t = false;
+                for (var i = 0; i < account.Length; i++)
+                {
+                    if (account[i] != ':')
+                    {
+                        continue;
+                    }
+
+                    if (!t)
+                    {
+                        t = true;
+                    }
+                    else
+                    {
+                        chainSet.Add(account[..i]);
+                        break;
+                    }
+                }
+            }
+
+            chainIds = chainSet.ToArray();
+            return true;
         }
 
         private sealed class NamespaceEqualityComparer : IEqualityComparer<Namespace>
