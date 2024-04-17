@@ -145,23 +145,36 @@ public class AddressProvider : IAddressProvider
         {
             // Check if current default namespace is still valid with the current session
             var currentDefault = DefaultNamespace;
+
+            
             if (currentDefault != null && DefaultSession.Namespaces.ContainsKey(currentDefault))
             {
+                if (!DefaultSession.Namespaces[DefaultNamespace].TryGetChains(out var approvedChains))
+                {
+                    throw new InvalidOperationException("Could not get chains for current default namespace");
+                }
+                
                 // Check if current default chain is still valid with the current session
                 var currentChain = DefaultChainId;
-                if (currentChain == null || !DefaultSession.Namespaces[DefaultNamespace].Chains.Contains(currentChain))
+
+                if (currentChain == null || !approvedChains.Contains(currentChain))
                 {
                     // If the current default chain is not valid, let's use the first one
-                    DefaultChainId = DefaultSession.Namespaces[DefaultNamespace].Chains[0];
+                    DefaultChainId = approvedChains[0];
                 }
             }
             else
             {
                 // If DefaultNamespace is null or not found in current available spaces, update it
                 DefaultNamespace = DefaultSession.Namespaces.Keys.FirstOrDefault();
-                if (DefaultNamespace != null && DefaultSession.Namespaces[DefaultNamespace].Chains != null)
+                if (DefaultNamespace != null)
                 {
-                    DefaultChainId = DefaultSession.Namespaces[DefaultNamespace].Chains[0];
+                    if (!DefaultSession.Namespaces[DefaultNamespace].TryGetChains(out var approvedChains))
+                    {
+                        throw new InvalidOperationException("Could not get chains for current default namespace");
+                    }
+
+                    DefaultChainId = approvedChains[0];
                 }
                 else
                 {
