@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -41,6 +39,8 @@ namespace WalletConnectSharp.Network.Models
         /// <summary>
         /// Get the method for this payload, if this payload is a request.
         /// If this payload is not a request, then an error is thrown
+        /// If the payload contains a "params" object and within it a "request" object with a "method" value, that method is returned.
+        /// Otherwise, the method is retrieved directly from the payload's "method" value.
         /// </summary>
         [JsonIgnore]
         public string Method
@@ -50,7 +50,13 @@ namespace WalletConnectSharp.Network.Models
                 if (!IsRequest)
                     throw new ArgumentException("The given payload is not a request, and thus has no Method");
 
-                return _extraStuff["method"].ToObject<string>();
+                if (_extraStuff.TryGetValue("params", out var param) && param["request"]?["method"] != null)
+                {
+                    return param["request"]?["method"].ToObject<string>();
+                }
+                
+                var method = _extraStuff["method"].ToObject<string>();
+                return method;
             }
         }
         

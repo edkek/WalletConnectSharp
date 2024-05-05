@@ -40,6 +40,64 @@ namespace WalletConnectSharp.Sign.Test
             public int result;
         }
 
+        // represents array of string requests, similar to personal_sign
+        [RpcMethod("complex_test_method"), RpcRequestOptions(Clock.ONE_MINUTE, 99990)]
+        public class ComplexTestRequest: List<string>
+        {
+            public ComplexTestRequest()
+            {
+            }
+
+            public ComplexTestRequest(params string[] args) : base(args)
+            {
+            }
+
+            public int A
+            {
+                get
+                {
+                    if (Count != 2 || !int.TryParse(this[0], out var a))
+                    {
+                        return 0;
+                    }
+
+                    return a;
+                }
+            }
+
+            public int B
+            {
+                get
+                {
+                    if (Count != 2 || !int.TryParse(this[1], out var b))
+                    {
+                        return 0;
+                    }
+
+                    return b;
+                }
+            }
+        }
+        
+        // represents array of object requests, similar to eth_sendTransaction
+        [RpcMethod("complex_test_method_2"), 
+         RpcRequestOptions(Clock.ONE_MINUTE, 99991), 
+         RpcResponseOptions(Clock.ONE_MINUTE, 99992)]
+        public class ComplexTestRequest2 : List<TestRequest2>
+        {
+            public ComplexTestRequest2()
+            {
+            }
+
+            public ComplexTestRequest2(params TestRequest2[] args): base(args)
+            {
+            }
+
+            public string X => this.FirstOrDefault()?.x ?? string.Empty;
+
+            public int Y => this.FirstOrDefault()?.y ?? -1;
+        }
+        
         public WalletConnectSignClient ClientA
         {
             get
@@ -383,6 +441,113 @@ namespace WalletConnectSharp.Sign.Test
             
             Assert.Equal(eventResult, a * b);
             Assert.Equal(eventResult, testData.a * testData.b);
+            Assert.Equal(eventResult, responseReturned.result);
+            
+            Assert.True(responseReturned2);
+        }
+
+        [Fact, Trait("Category", "integration")]
+        public async Task TestTwoUniqueComplexSessionRequestResponse()
+        {
+            await _cryptoFixture.WaitForClientsReady();
+
+            var testAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+            var testMethod = "complex_test_method";
+            var testMethod2 = "complex_test_method_2";
+
+            var dappConnectOptions = new ConnectOptions()
+            {
+                RequiredNamespaces = new RequiredNamespaces()
+                {
+                    {
+                        "eip155",
+                        new ProposedNamespace()
+                        {
+                            Methods = new[] {testMethod, testMethod2},
+                            Chains = new[] {"eip155:1", "eip155:10"},
+                            Events = new[] {"chainChanged", "accountsChanged"}
+                        }
+                    }
+                }
+            };
+
+            var dappClient = ClientA;
+            var connectData = await dappClient.Connect(dappConnectOptions);
+
+            var walletClient = ClientB;
+            var proposal = await walletClient.Pair(connectData.Uri);
+
+            var approveData = await walletClient.Approve(proposal, testAddress);
+
+            var sessionData = await connectData.Approval;
+            await approveData.Acknowledged();
+
+            var rnd = new Random();
+            var a = rnd.Next(100);
+            var b = rnd.Next(100);
+            var x = rnd.NextStrings(AllowedChars, (Math.Min(a, b), Math.Max(a, b)), 1).First();
+            var y = x.Length;
+
+            var testData = new ComplexTestRequest(a.ToString(), b.ToString());
+            var testData2 = new ComplexTestRequest2(new TestRequest2() {x = x, y = y});
+
+            var pending = new TaskCompletionSource<int>();
+            
+            // Step 1. Setup event listener for request
+            
+            // The wallet client will listen for the request with the "test_method" rpc method
+            walletClient.Engine.SessionRequestEvents<ComplexTestRequest, TestResponse>()
+                    .OnRequest += ( requestData) =>
+                {
+                    var request = requestData.Request;
+                    var data = request.Params;
+
+                    requestData.Response = new TestResponse()
+                    {
+                        result = data.A * data.B
+                    };
+                    
+                    return Task.CompletedTask;
+                };
+            
+            // The wallet client will listen for the request with the "test_method" rpc method
+            walletClient.Engine.SessionRequestEvents<ComplexTestRequest2, bool>()
+                .OnRequest += ( requestData) =>
+            {
+                var request = requestData.Request;
+                var data = request.Params;
+
+                requestData.Response = data.X.Length == data.Y;
+                    
+                return Task.CompletedTask;
+            };
+
+            // The dapp client will listen for the response
+            // Normally, we wouldn't do this and just rely on the return value
+            // from the dappClient.Engine.Request function call (the response Result or throws an Exception)
+            // We do it here for the sake of testing
+            dappClient.Engine.SessionRequestEvents<ComplexTestRequest, TestResponse>()
+                .FilterResponses((r) => r.Topic == sessionData.Topic)
+                .OnResponse += (responseData) =>
+            {
+                var response = responseData.Response;
+                
+                var data = response.Result;
+
+                pending.TrySetResult(data.result);
+
+                return Task.CompletedTask;
+            };
+            
+            // 2. Send the request from the dapp client
+            var responseReturned = await dappClient.Engine.Request<ComplexTestRequest, TestResponse>(sessionData.Topic, testData);
+            var responseReturned2 = await dappClient.Engine.Request<ComplexTestRequest2, bool>(sessionData.Topic, testData2);
+            
+            // 3. Wait for the response from the event listener
+            var eventResult = await pending.Task.WithTimeout(TimeSpan.FromSeconds(5));
+            
+            Assert.Equal(eventResult, a * b);
+            Assert.Equal(eventResult, testData.A * testData.B);
             Assert.Equal(eventResult, responseReturned.result);
             
             Assert.True(responseReturned2);
