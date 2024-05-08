@@ -98,23 +98,32 @@ namespace WalletConnectSharp.Core.Controllers
 
             async void RequestCallback(object sender, MessageEvent e)
             {
-                if (requestCallback == null || Disposed)
+                try
                 {
-                    return;
+                    if (requestCallback == null || Disposed)
+                    {
+                        return;
+                    }
+
+                    var topic = e.Topic;
+                    var message = e.Message;
+
+                    var options = DecodeOptionForTopic(topic);
+
+                    if (options == null && !await Core.Crypto.HasKeys(topic))
+                    {
+                        return;
+                    }
+
+                    var payload = await Core.Crypto.Decode<JsonRpcRequest<T>>(topic, message, options);
+
+                    (await Core.History.JsonRpcHistoryOfType<T, TR>()).Set(topic, payload, null);
+
+                    await requestCallback(topic, payload);
                 }
-
-                var topic = e.Topic;
-                var message = e.Message;
-
-                var options = DecodeOptionForTopic(topic);
-                
-                if (options == null && !await this.Core.Crypto.HasKeys(topic)) return;
-
-                var payload = await this.Core.Crypto.Decode<JsonRpcRequest<T>>(topic, message, options);
-
-                (await this.Core.History.JsonRpcHistoryOfType<T, TR>()).Set(topic, payload, null);
-
-                await requestCallback(topic, payload);
+                catch (JsonException)
+                {
+                }
             }
 
             async void ResponseCallback(object sender, MessageEvent e)
