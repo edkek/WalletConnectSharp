@@ -395,6 +395,10 @@ namespace WalletConnectSharp.Sign.Test
             
             var dappClient = ClientA;
             var walletClient = ClientB;
+
+            await dappClient.AddressProvider.LoadDefaultsAsync();
+            await walletClient.AddressProvider.LoadDefaultsAsync();
+            
             if (!dappClient.AddressProvider.HasDefaultSession && !walletClient.AddressProvider.HasDefaultSession)
             {
                 var testAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
@@ -579,6 +583,8 @@ namespace WalletConnectSharp.Sign.Test
 
             var defaultSessionTopic = _cryptoFixture.ClientA.AddressProvider.DefaultSession.Topic;
 
+            Assert.NotNull(defaultSessionTopic);
+
             _cryptoFixture.StorageOverrideA = _cryptoFixture.ClientA.Core.Storage;
             _cryptoFixture.StorageOverrideB = _cryptoFixture.ClientB.Core.Storage;
 
@@ -586,10 +592,9 @@ namespace WalletConnectSharp.Sign.Test
             
             await _cryptoFixture.DisposeAndReset();
             
-            _testOutputHelper.WriteLine(string.Join(",", _cryptoFixture.ClientB.Core.Crypto.KeyChain.Keychain.Values));
-
             await Task.Delay(500);
 
+            await _cryptoFixture.ClientA.AddressProvider.LoadDefaultsAsync();
             var reloadedDefaultSessionTopic = _cryptoFixture.ClientA.AddressProvider.DefaultSession.Topic;
             
             Assert.Equal(defaultSessionTopic, reloadedDefaultSessionTopic);

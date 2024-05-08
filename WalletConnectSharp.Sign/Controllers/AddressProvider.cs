@@ -1,4 +1,5 @@
-﻿using WalletConnectSharp.Sign.Interfaces;
+﻿using WalletConnectSharp.Common.Utils;
+using WalletConnectSharp.Sign.Interfaces;
 using WalletConnectSharp.Sign.Models;
 using WalletConnectSharp.Sign.Models.Engine.Events;
 
@@ -100,12 +101,17 @@ public class AddressProvider : IAddressProvider
         await _client.Core.Storage.SetItem($"{Context}-default-session", _state);
     }
 
-    public virtual async Task LoadDefaults()
+    public virtual async Task LoadDefaultsAsync()
     {
         var key = $"{Context}-default-session";
         if (await _client.Core.Storage.HasItem(key))
         {
-            _state = await _client.Core.Storage.GetItem<DefaultData>(key);
+            var state = await _client.Core.Storage.GetItem<DefaultData>(key);
+            var sessionExpiry = state.Session.Expiry;
+
+            _state = sessionExpiry != null && !Clock.IsExpired(sessionExpiry.Value)
+                ? state
+                : new DefaultData();
         }
         else
         {
@@ -189,11 +195,6 @@ public class AddressProvider : IAddressProvider
             DefaultNamespace = null;
             DefaultChainId = null;
         }
-    }
-
-    public async Task InitAsync()
-    {
-        await this.LoadDefaults();
     }
 
     public async Task SetDefaultNamespaceAsync(string @namespace)
