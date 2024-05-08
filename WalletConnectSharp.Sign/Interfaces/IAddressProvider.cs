@@ -16,10 +16,7 @@ public interface IAddressProvider : IModule
     string DefaultChainId { get; }
     
     ISession Sessions { get; }
-
-
-    Task InitAsync();
-
+    
     Task SetDefaultNamespaceAsync(string @namespace);
 
     Task SetDefaultChainIdAsync(string chainId);
@@ -27,4 +24,6 @@ public interface IAddressProvider : IModule
     Caip25Address CurrentAddress(string chainId = null, SessionStruct session = default);
 
     IEnumerable<Caip25Address> AllAddresses(string @namespace = null, SessionStruct session = default);
+    
+    public Task LoadDefaultsAsync();
 }
