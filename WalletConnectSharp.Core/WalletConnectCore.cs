@@ -219,6 +219,7 @@ namespace WalletConnectSharp.Core
                 MessageHandler?.Dispose();
                 Expirer?.Dispose();
                 Pairing?.Dispose();
+                Verify?.Dispose();
             }
 
             Disposed = true;
