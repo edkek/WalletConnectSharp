@@ -1,35 +1,38 @@
-﻿using System.Net;
-using Newtonsoft.Json;
-using WalletConnectSharp.Common.Utils;
+﻿using Newtonsoft.Json;
+using WalletConnectSharp.Common.Logging;
 
 namespace WalletConnectSharp.Core.Models.Verify;
 
-public class Verifier
+public sealed class Verifier : IDisposable
 {
-    public const string VerifyServer = "https://verify.walletconnect.com";
-    
-    public CancellationTokenSource CancellationTokenSource { get; }
+    private const string VerifyServer = "https://verify.walletconnect.com";
 
-    public Verifier()
+    private readonly HttpClient _client = new()
     {
-        this.CancellationTokenSource = new CancellationTokenSource(Clock.AsTimeSpan(Clock.FIVE_SECONDS));
-    }
+        Timeout = TimeSpan.FromSeconds(5)
+    };
 
     public async Task<string> Resolve(string attestationId)
     {
         try
         {
-            using HttpClient client = new HttpClient();
             var url = $"{VerifyServer}/attestation/{attestationId}";
-            var results = await client.GetStringAsync(url);
+            WCLogger.Log($"[Verifier] Resolving attestation {attestationId} from {url}");
+            var results = await _client.GetStringAsync(url);
+            WCLogger.Log($"[Verifier] Resolved attestation. Results: {results}");
 
             var verifiedContext = JsonConvert.DeserializeObject<VerifiedContext>(results);
 
-            return verifiedContext != null ? verifiedContext.Origin : "";
+            return verifiedContext != null ? verifiedContext.Origin : string.Empty;
         }
         catch
         {
-            return "";
+            return string.Empty;
         }
+    }
+
+    public void Dispose()
+    {
+        _client?.Dispose();
     }
 }
