@@ -656,7 +656,7 @@ namespace WalletConnectSharp.Sign
 
             if (!string.IsNullOrWhiteSpace(pairingTopic))
             {
-                await MessageHandler.SendError<SessionPropose, SessionProposeResponse>(id, pairingTopic, reason);
+                await MessageHandler.SendError<SessionPropose, SessionProposeResponseReject>(id, pairingTopic, reason);
                 await this.Client.Proposal.Delete(id, Error.FromErrorType(ErrorType.USER_DISCONNECTED));
             }
         }

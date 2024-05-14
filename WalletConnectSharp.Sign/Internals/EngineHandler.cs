@@ -77,7 +77,7 @@ namespace WalletConnectSharp.Sign
             }
             catch (WalletConnectException e)
             {
-                await MessageHandler.SendError<SessionPropose, SessionProposeResponse>(id, topic,
+                await MessageHandler.SendError<SessionPropose, SessionProposeResponseAutoReject>(id, topic,
                     Error.FromException(e));
             }
         }
