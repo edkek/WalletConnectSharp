@@ -5,7 +5,7 @@ namespace WalletConnectSharp.Core;
 public static class Utils
 {
     private const string SessionIdPattern = @"^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}$";
-    private static readonly Regex SessionIdRegex = new(SessionIdPattern);
+    private static readonly Regex SessionIdRegex = new(SessionIdPattern, RegexOptions.None, TimeSpan.FromSeconds(1));
     
     public static bool IsValidUrl(string url)
     {
