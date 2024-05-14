@@ -1,20 +1,30 @@
-﻿namespace WalletConnectSharp.Core;
+﻿using System.Text.RegularExpressions;
+
+namespace WalletConnectSharp.Core;
 
 public static class Utils
 {
+    private const string SessionIdPattern = @"^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}$";
+    private static readonly Regex SessionIdRegex = new(SessionIdPattern);
+    
     public static bool IsValidUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
             
         try
         {
-            new Uri(url);
+            _ = new Uri(url);
             return true;
         }
         catch (Exception e)
         {
             return false;
         }
+    }
+
+    public static bool IsValidChainId(string chainId)
+    {
+        return SessionIdRegex.IsMatch(chainId);
     }
 
     public static bool IsValidRequestExpiry(long expiry, long min, long max)

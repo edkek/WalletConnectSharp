@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using WalletConnectSharp.Core;
 using WalletConnectSharp.Core.Interfaces;
 using WalletConnectSharp.Core.Models.Relay;
 
@@ -144,9 +145,14 @@ namespace WalletConnectSharp.Sign.Models
 
         private void ValidateChainIdAndTopic(string chainId)
         {
-            if (chainId == null)
+            if (string.IsNullOrWhiteSpace(chainId))
             {
-                throw new ArgumentException("chainId is null");
+                throw new ArgumentException("chainId is null or empty");
+            }
+
+            if (!Utils.IsValidChainId(chainId))
+            {
+                throw new ArgumentException("The format of 'chainId' is invalid. Must be in the format of 'namespace:chainId' (e.g. 'eip155:10'). See CAIP-2 for more information.");
             }
 
             if (string.IsNullOrWhiteSpace(Topic))
