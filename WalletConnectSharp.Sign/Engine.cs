@@ -588,7 +588,6 @@ namespace WalletConnectSharp.Sign
                 Namespaces = namespaces,
                 Controller = new Participant() { PublicKey = selfPublicKey, Metadata = this.Client.Metadata },
                 Expiry = Clock.CalculateExpiry(SessionExpiry),
-                PairingTopic = pairingTopic
             };
 
             await this.Client.Core.Relayer.Subscribe(sessionTopic);
