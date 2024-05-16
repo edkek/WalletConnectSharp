@@ -88,13 +88,11 @@ namespace WalletConnectSharp.Sign
             logger.Log($"Got session propose response with id {id}");
             if (payload.IsError)
             {
-                logger.LogError("response was error");
                 await this.Client.Proposal.Delete(id, Error.FromErrorType(ErrorType.USER_DISCONNECTED));
                 this.SessionConnectionErrored?.Invoke(this, payload.Error.ToException());
             }
             else
             {
-                logger.Log("response was success");
                 var result = payload.Result;
                 var proposal = this.Client.Proposal.Get(id);
                 var selfPublicKey = proposal.Proposer.PublicKey;
@@ -104,10 +102,12 @@ namespace WalletConnectSharp.Sign
                     selfPublicKey,
                     peerPublicKey
                 );
+
+                proposal.SessionTopic = sessionTopic;
+                await Client.Proposal.Set(id, proposal);
                 await this.Client.Core.Pairing.Activate(topic);
-                logger.Log($"pairing activated for topic {topic}");
+                logger.Log($"Pairing activated for topic {topic}");
                 
-                // try to do this a couple of times .. do it until it works?
                 int attempts = 5;
                 do
                 {
@@ -137,7 +137,10 @@ namespace WalletConnectSharp.Sign
             try
             {
                 await PrivateThis.IsValidSessionSettleRequest(@params);
-                var pairingTopic = @params.PairingTopic;
+
+                var proposal = Array.Find(Client.Proposal.Values, p => p.SessionTopic == topic);
+
+                var pairingTopic = proposal.PairingTopic;
                 var relay = @params.Relay;
                 var controller = @params.Controller;
                 var expiry = @params.Expiry;
@@ -163,7 +166,7 @@ namespace WalletConnectSharp.Sign
                         Metadata = controller.Metadata
                     },
 #pragma warning disable S6602
-                    RequiredNamespaces = Client.Proposal.Values.FirstOrDefault(p => p.PairingTopic == pairingTopic).RequiredNamespaces
+                    RequiredNamespaces = proposal.RequiredNamespaces
 #pragma warning restore S6602
                 };
                 await MessageHandler.SendResult<SessionSettle, bool>(payload.Id, topic, true);

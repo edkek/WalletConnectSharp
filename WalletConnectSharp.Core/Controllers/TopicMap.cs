@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using WalletConnectSharp.Core.Interfaces;
 
 namespace WalletConnectSharp.Core.Controllers
@@ -66,23 +63,23 @@ namespace WalletConnectSharp.Core.Controllers
         /// <param name="id">The subscription id to remove, if set to null then all ids are removed from the topic</param>
         public void Delete(string topic, string id = null)
         {
-            if (!topicMap.ContainsKey(topic))
+            if (!topicMap.TryGetValue(topic, out var ids))
+            {
                 return;
+            }
 
             if (id == null)
             {
                 topicMap.Remove(topic);
-                return;
             }
-
-            if (!Exists(topic, id))
-                return;
-
-            var ids = topicMap[topic];
-            ids.Remove(id);
-
-            if (ids.Count == 0)
-                topicMap.Remove(topic);
+            else
+            {
+                ids.Remove(id);
+                if (ids.Count == 0)
+                {
+                    topicMap.Remove(topic);
+                }
+            }
         }
 
         /// <summary>
