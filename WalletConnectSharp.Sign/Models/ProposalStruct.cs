@@ -80,6 +80,12 @@ namespace WalletConnectSharp.Sign.Models
         public string PairingTopic;
 
         /// <summary>
+        /// The topic of the session. Set after the proposal is approved.
+        /// </summary>
+        [JsonProperty("sessionTopic")]
+        public string SessionTopic;
+
+        /// <summary>
         /// Approve this proposal with a single address and (optional) protocol options. The
         /// protocolOption given must exist in this proposal
         /// </summary>

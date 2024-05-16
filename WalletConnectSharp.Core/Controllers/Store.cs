@@ -150,13 +150,9 @@ namespace WalletConnectSharp.Core.Controllers
         {
             IsInitialized();
 
-            if (map.ContainsKey(key))
-            {
-                return Update(key, value);
-            }
-
-            map.Add(key, value);
-            return Persist();
+            return !map.TryAdd(key, value)
+                ? Update(key, value)
+                : Persist();
         }
 
         /// <summary>

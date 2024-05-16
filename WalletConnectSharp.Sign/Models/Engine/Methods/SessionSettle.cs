@@ -18,6 +18,7 @@ namespace WalletConnectSharp.Sign.Models.Engine.Methods
         /// Pairing topic for this session
         /// </summary>
         [JsonProperty("pairingTopic")]
+        [Obsolete("This isn't a standard property of the Sign API. Other Sign implementations may not support this property whcih could lead to unexpected behavior.")]
         public string PairingTopic;
         
         /// <summary>
