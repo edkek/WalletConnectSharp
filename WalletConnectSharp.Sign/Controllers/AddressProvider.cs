@@ -1,4 +1,5 @@
 ﻿using WalletConnectSharp.Common.Utils;
+using WalletConnectSharp.Core;
 using WalletConnectSharp.Sign.Interfaces;
 using WalletConnectSharp.Sign.Models;
 using WalletConnectSharp.Sign.Models.Engine.Events;
@@ -220,9 +221,9 @@ public class AddressProvider : IAddressProvider
             throw new ArgumentNullException(nameof(chainId));
         }
 
-        if (!DefaultSession.Namespaces[DefaultNamespace].Chains.Contains(chainId))
+        if (!Utils.IsValidChainId(chainId))
         {
-            throw new InvalidOperationException($"Chain {chainId} is not available in the current session");
+            throw new ArgumentException("The format of 'chainId' is invalid. Must be in the format of 'namespace:chainId' (e.g. 'eip155:10'). See CAIP-2 for more information.");
         }
 
         DefaultChainId = chainId;
