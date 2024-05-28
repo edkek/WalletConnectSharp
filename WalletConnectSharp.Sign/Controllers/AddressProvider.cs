@@ -220,11 +220,6 @@ public class AddressProvider : IAddressProvider
             throw new ArgumentNullException(nameof(chainId));
         }
 
-        if (!DefaultSession.Namespaces[DefaultNamespace].Chains.Contains(chainId))
-        {
-            throw new InvalidOperationException($"Chain {chainId} is not available in the current session");
-        }
-
         DefaultChainId = chainId;
         await SaveDefaults();
     }
