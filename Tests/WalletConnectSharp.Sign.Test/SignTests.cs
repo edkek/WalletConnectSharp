@@ -1,11 +1,9 @@
 using WalletConnectSharp.Common.Model.Errors;
 using WalletConnectSharp.Common.Utils;
-using WalletConnectSharp.Crypto;
 using WalletConnectSharp.Network.Models;
 using WalletConnectSharp.Sign.Interfaces;
 using WalletConnectSharp.Sign.Models;
 using WalletConnectSharp.Sign.Models.Engine;
-using WalletConnectSharp.Storage;
 using WalletConnectSharp.Tests.Common;
 using Xunit;
 using Xunit.Abstractions;
@@ -786,8 +784,8 @@ namespace WalletConnectSharp.Sign.Test
 
             _ = await TestConnectMethod(ClientA, ClientB);
 
-            const string badChainId = "invalid:invalid";
-            await Assert.ThrowsAsync<InvalidOperationException>(() => ClientA.AddressProvider.SetDefaultChainIdAsync(badChainId));
+            const string badChainId = "badChainId";
+            await Assert.ThrowsAsync<ArgumentException>(() => ClientA.AddressProvider.SetDefaultChainIdAsync(badChainId));
 
             // Change the default chain id
             const string newChainId = "eip155:10";
