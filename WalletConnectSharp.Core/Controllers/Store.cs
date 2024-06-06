@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -150,9 +150,17 @@ namespace WalletConnectSharp.Core.Controllers
         {
             IsInitialized();
 
-            return !map.TryAdd(key, value)
-                ? Update(key, value)
-                : Persist();
+            if (map == null)
+            {
+                map = new Dictionary<TKey, TValue>();
+            }
+            var b = !map.TryAdd(key, value);
+            if (b)
+            {
+                return Update(key, value);
+            }
+            else
+            { return Persist(); }
         }
 
         /// <summary>
