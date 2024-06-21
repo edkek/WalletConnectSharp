@@ -17,7 +17,7 @@ namespace WalletConnectSharp.Network.Tests
         private static readonly JsonRpcRequest<TopicData> TEST_BAD_IRN_REQUEST =
             new JsonRpcRequest<TopicData>(RelayProtocols.DefaultProtocol.Subscribe, new TopicData());
 
-        private static readonly string DEFAULT_GOOD_WS_URL = "wss://relay.walletconnect.com";
+        private static readonly string DEFAULT_GOOD_WS_URL = "wss://relay.walletconnect.org";
 
         private static readonly string ENVIRONMENT_DEFAULT_GOOD_WS_URL =
             Environment.GetEnvironmentVariable("RELAY_ENDPOINT");
