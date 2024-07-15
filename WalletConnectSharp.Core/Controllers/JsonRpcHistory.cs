@@ -276,13 +276,13 @@ namespace WalletConnectSharp.Core.Controllers
         {
             IsInitialized();
 
-            if (!_records.ContainsKey(id))
+            if (!_records.TryGetValue(id, out var record))
             {
                 throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY,
                     new Dictionary<string, object>() { { "Tag", $"{Name}: {id}" } });
             }
 
-            return _records[id];
+            return record;
         }
 
         private async Task Persist()

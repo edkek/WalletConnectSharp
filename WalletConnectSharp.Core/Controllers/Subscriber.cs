@@ -358,14 +358,14 @@ namespace WalletConnectSharp.Core.Controllers
         {
             SetSubscription(id, new ActiveSubscription() { Id = id, Relay = @params.Relay, Topic = @params.Topic });
 
-            pending.Remove(@params.Topic);
+            _ = pending.Remove(@params.Topic);
         }
 
         protected virtual void OnResubscribe(string id, PendingSubscription @params)
         {
             AddSubscription(id, new ActiveSubscription() { Id = id, Relay = @params.Relay, Topic = @params.Topic });
 
-            pending.Remove(@params.Topic);
+            _ = pending.Remove(@params.Topic);
         }
 
         protected virtual async Task OnUnsubscribe(string topic, string id, Error reason)
@@ -550,23 +550,24 @@ namespace WalletConnectSharp.Core.Controllers
 
         protected virtual async Task<string[]> RpcBatchSubscribe(string[] topics, ProtocolOptions relay)
         {
-            if (topics.Length == 0) return Array.Empty<string>();
+            if (topics.Length == 0)
+            {
+                return [];
+            }
 
             var api = RelayProtocols.GetRelayProtocol(relay.Protocol);
-            var request = new RequestArguments<BatchSubscribeParams>()
+            var request = new RequestArguments<BatchSubscribeParams>
             {
-                Method = api.BatchSubscribe, Params = new BatchSubscribeParams() { Topics = topics }
+                Method = api.BatchSubscribe,
+                Params = new BatchSubscribeParams
+                {
+                    Topics = topics
+                }
             };
-            try
-            {
-                return await this._relayer.Request<BatchSubscribeParams, string[]>(request)
-                    .WithTimeout(TimeSpan.FromSeconds(45));
-            }
-            catch (Exception e)
-            {
-                this._relayer.TriggerConnectionStalled();
-                throw;
-            }
+
+            return await _relayer
+                .Request<BatchSubscribeParams, string[]>(request)
+                .WithTimeout(TimeSpan.FromMinutes(1));
         }
 
         protected virtual async Task BatchSubscribe(PendingSubscription[] subscriptions)
@@ -574,9 +575,23 @@ namespace WalletConnectSharp.Core.Controllers
             if (subscriptions.Length == 0) return;
             var topics = subscriptions.Select(s => s.Topic).ToArray();
             var relay = subscriptions[0].Relay;
-            var result = await this.RpcBatchSubscribe(topics, relay);
+
+            string[] result;
+            try
+            {
+                result = await RpcBatchSubscribe(topics, relay);
+            }
+            catch (TimeoutException)
+            {
+                _relayer.TriggerConnectionStalled();
+                return;
+            }
+
             OnBatchSubscribe(result
-                .Select((r, i) => new ActiveSubscription() { Id = r, Relay = relay, Topic = topics[i] })
+                .Select((r, i) => new ActiveSubscription
+                {
+                    Id = r, Relay = relay, Topic = topics[i]
+                })
                 .ToArray());
         }
 

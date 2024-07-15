@@ -294,10 +294,7 @@ namespace WalletConnectSharp.Core.Controllers
 
         private Expiration GetExpiration(string target)
         {
-            if (!_expirations.ContainsKey(target))
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, $"{Name}: {target}");
-
-            return _expirations[target];
+            return _expirations.GetValueOrDefault(target);
         }
 
         private void CheckExpiry(string target, Expiration expiration)
