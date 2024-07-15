@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-
 namespace WalletConnectSharp.Network.Models
 {
     /// <summary>
@@ -25,25 +22,36 @@ namespace WalletConnectSharp.Network.Models
         {
             MethodName = method;
         }
-        
+
         /// <summary>
-        /// Get the method name that should be used for a given class type T. This is
-        /// defined by the RpcMethodAttribute attached to the type T. If the type T has no
-        /// RpcMethodAttribute, then an Exception is thrown
+        ///     Retrieves the method name to be used for a given class type T, as defined by the RpcMethodAttribute
+        ///     attached to type T. This method ensures that exactly one RpcMethodAttribute is present on the type T.
+        ///     If no RpcMethodAttribute is found, or if multiple are found, an InvalidOperationException is thrown.
         /// </summary>
-        /// <typeparam name="T">The type T to get the method name for</typeparam>
-        /// <returns>The method name to use as a string</returns>
-        /// <exception cref="Exception">If the type T has no
-        /// RpcMethodAttribute, then an Exception is thrown</exception>
+        /// <typeparam name="T">The type T for which to get the method name.</typeparam>
+        /// <returns>The method name to use, as a string.</returns>
+        /// <exception cref="InvalidOperationException">
+        ///     Thrown if the type T has no RpcMethodAttribute defined,
+        ///     or if multiple RpcMethodAttribute definitions are found.
+        /// </exception>
         public static string MethodForType<T>()
         {
             var attributes = typeof(T).GetCustomAttributes(typeof(RpcMethodAttribute), true);
-            if (attributes.Length != 1)
-                throw new Exception($"Type {typeof(T).FullName} has no WcMethod attribute!");
+            switch (attributes.Length)
+            {
+                case 0:
+                    throw new InvalidOperationException($"Type {typeof(T).FullName} has no {nameof(RpcMethodAttribute)} defined.");
+                case > 1:
+                    throw new InvalidOperationException($"Type {typeof(T).FullName} has multiple {nameof(RpcMethodAttribute)} definitions. Only one is allowed.");
+            }
 
-            var method = attributes.Cast<RpcMethodAttribute>().First().MethodName;
+            var methodAttribute = attributes.Cast<RpcMethodAttribute>().SingleOrDefault();
+            if (methodAttribute == null)
+            {
+                throw new InvalidOperationException($"Type {typeof(T).FullName} has multiple RpcMethodAttribute definitions. Only one is allowed.");
+            }
 
-            return method;
+            return methodAttribute.MethodName;
         }
     }
 }

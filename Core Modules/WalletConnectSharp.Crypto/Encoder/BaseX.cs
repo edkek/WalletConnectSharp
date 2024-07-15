@@ -1,5 +1,3 @@
-using System;
-
 namespace WalletConnectSharp.Crypto.Encoder
 {
     internal sealed class BaseX
@@ -14,9 +12,11 @@ namespace WalletConnectSharp.Crypto.Encoder
         
         public BaseX(string alphabet, string name)
         {
-            if (alphabet.Length >= 255) 
-                throw new ArgumentException("Alphabet too long");
-            
+            if (alphabet.Length >= 255)
+            {
+                throw new ArgumentException("Alphabet too long", nameof(alphabet));
+            }
+
             this.name = name;
             this.Alphabet = alphabet.ToCharArray();
             
@@ -70,7 +70,7 @@ namespace WalletConnectSharp.Crypto.Encoder
                 }
                 if (carry != 0)
                 {
-                    throw new Exception("Non-zero carry");
+                    throw new InvalidOperationException("Non-zero carry");
                 }
                 length = i;
                 pbegin++;
@@ -126,7 +126,7 @@ namespace WalletConnectSharp.Crypto.Encoder
 
                 if (carry != 0)
                 {
-                    throw new Exception("Non-zero carry");
+                    throw new InvalidOperationException("Non-zero carry");
                 }
                 length = i;
                 psz++;
@@ -155,7 +155,7 @@ namespace WalletConnectSharp.Crypto.Encoder
             var buffer = DecodeUnsafe(source);
             if (buffer != null)
                 return buffer;
-            throw new Exception($"Non-{name} character");
+            throw new InvalidOperationException($"Non-{name} character"); 
         }
     }
 }

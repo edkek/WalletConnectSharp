@@ -213,7 +213,7 @@ namespace WalletConnectSharp.Core.Controllers
         /// <typeparam name="T2">The second type to check for <see cref="RpcRequestOptionsAttribute"/></typeparam>
         /// <returns><see cref="PublishOptions"/> constructed from the values found in the <see cref="RpcRequestOptionsAttribute"/>
         /// from either type T1 or T2</returns>
-        /// <exception cref="Exception">If no <see cref="RpcOptionsAttribute"/> is found in either type</exception>
+        /// <exception cref="InvalidOperationException">If no <see cref="RpcOptionsAttribute"/> is found in either type</exception>
         public PublishOptions RpcRequestOptionsFromType<T1, T2>()
         {
             var opts = RpcRequestOptionsForType<T1>();
@@ -222,8 +222,10 @@ namespace WalletConnectSharp.Core.Controllers
                 opts = RpcRequestOptionsForType<T2>();
                 if (opts == null)
                 {
-                    throw new Exception(
-                        $"No RpcRequestOptions attribute found in either {typeof(T1).FullName} or {typeof(T2).FullName}!");
+                    throw new InvalidOperationException(
+                        $"No RpcRequestOptions attribute found on either {typeof(T1).FullName} or {typeof(T2).FullName}. "
+                        + $"Ensure that at least one of these types is decorated with the {nameof(RpcRequestOptionsAttribute)}."
+                    );
                 }
             }
 
@@ -237,18 +239,28 @@ namespace WalletConnectSharp.Core.Controllers
         /// <typeparam name="T">The type to check for <see cref="RpcRequestOptionsAttribute"/></typeparam>
         /// <returns><see cref="PublishOptions"/> constructed from the values found in the <see cref="RpcRequestOptionsAttribute"/>
         /// from the given type T</returns>
-        /// <exception cref="Exception">If no <see cref="RpcOptionsAttribute"/> is found in the type T</exception>
+        /// <exception cref="InvalidOperationException">If no <see cref="RpcOptionsAttribute"/> is found in the type T or if multiple are found</exception>
         public PublishOptions RpcRequestOptionsForType<T>()
         {
             var attributes = typeof(T).GetCustomAttributes(typeof(RpcRequestOptionsAttribute), true);
-            if (attributes.Length > 1)
-                throw new Exception($"Type {typeof(T).FullName} has multiple RpcRequestOptions attributes!");
-            if (attributes.Length == 0)
-                return null;
+            switch (attributes.Length)
+            {
+                case 0:
+                    throw new InvalidOperationException($"Type {typeof(T).FullName} has no {nameof(RpcRequestOptionsAttribute)} defined.");
+                case > 1:
+                    throw new InvalidOperationException($"Type {typeof(T).FullName} has multiple {nameof(RpcRequestOptionsAttribute)} definitions. Only one is allowed.");
+            }
 
-            var opts = attributes.Cast<RpcRequestOptionsAttribute>().First();
+            var opts = attributes.Cast<RpcRequestOptionsAttribute>().SingleOrDefault();
+            if (opts == null)
+            {
+                throw new InvalidOperationException($"Type {typeof(T).FullName} has multiple {nameof(RpcRequestOptionsAttribute)} definitions. Only one is allowed.");
+            }
 
-            return new PublishOptions() { Tag = opts.Tag, TTL = opts.TTL };
+            return new PublishOptions
+            {
+                Tag = opts.Tag, TTL = opts.TTL
+            };
         }
 
         /// <summary>
@@ -259,20 +271,15 @@ namespace WalletConnectSharp.Core.Controllers
         /// <typeparam name="T2">The second type to check for <see cref="RpcResponseOptionsAttribute"/></typeparam>
         /// <returns><see cref="PublishOptions"/> constructed from the values found in the <see cref="RpcResponseOptionsAttribute"/>
         /// from either type T1 or T2</returns>
-        /// <exception cref="Exception">If no <see cref="RpcResponseOptionsAttribute"/> is found in either type</exception>
+        /// <exception cref="InvalidOperationException">If no <see cref="RpcResponseOptionsAttribute"/> is found in either type</exception>
         public PublishOptions RpcResponseOptionsFromTypes<T1, T2>()
         {
-            var opts = RpcResponseOptionsForType<T1>();
-            if (opts != null)
-            {
-                return opts;
-            }
-
-            opts = RpcResponseOptionsForType<T2>();
+            var opts = RpcResponseOptionsForType<T1>() ?? RpcResponseOptionsForType<T2>();
             if (opts == null)
             {
-                throw new Exception(
-                    $"No RpcResponseOptions attribute found in either {typeof(T1).FullName} or {typeof(T2).FullName}!");
+                throw new InvalidOperationException(
+                    $"No {nameof(RpcResponseOptionsAttribute)} found on either {typeof(T1).FullName} or {typeof(T2).FullName}. " +
+                    "Ensure that at least one of these types is decorated with the RpcResponseOptionsAttribute.");
             }
 
             return opts;
@@ -289,14 +296,24 @@ namespace WalletConnectSharp.Core.Controllers
         public PublishOptions RpcResponseOptionsForType<T>()
         {
             var attributes = typeof(T).GetCustomAttributes(typeof(RpcResponseOptionsAttribute), true);
-            if (attributes.Length > 1)
-                throw new Exception($"Type {typeof(T).FullName} has multiple RpcResponseOptions attributes!");
-            if (attributes.Length == 0)
-                return null;
+            switch (attributes.Length)
+            {
+                case 0:
+                    return null;
+                case > 1:
+                    throw new InvalidOperationException($"Type {typeof(T).FullName} has multiple {nameof(RpcMethodAttribute)} definitions. Only one is allowed.");
+            }
 
-            var opts = attributes.Cast<RpcResponseOptionsAttribute>().First();
+            var opts = attributes.Cast<RpcResponseOptionsAttribute>().SingleOrDefault();
+            if (opts == null)
+            {
+                throw new InvalidOperationException($"Type {typeof(T).FullName} has multiple {nameof(RpcMethodAttribute)} definitions. Only one is allowed.");
+            }
 
-            return new PublishOptions() { Tag = opts.Tag, TTL = opts.TTL };
+            return new PublishOptions()
+            {
+                Tag = opts.Tag, TTL = opts.TTL
+            };
         }
 
         public void SetDecodeOptionsForTopic(DecodeOptions options, string topic)

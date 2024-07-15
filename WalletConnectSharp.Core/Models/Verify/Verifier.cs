@@ -17,9 +17,7 @@ public sealed class Verifier : IDisposable
         try
         {
             var url = $"{VerifyServer}/attestation/{attestationId}";
-            WCLogger.Log($"[Verifier] Resolving attestation {attestationId} from {url}");
             var results = await _client.GetStringAsync(url);
-            WCLogger.Log($"[Verifier] Resolved attestation. Results: {results}");
 
             var verifiedContext = JsonConvert.DeserializeObject<VerifiedContext>(results);
 

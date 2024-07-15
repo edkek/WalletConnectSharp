@@ -260,7 +260,6 @@ namespace WalletConnectSharp.Core.Controllers
             if (_relayer.TransportExplicitlyClosed)
                 return;
 
-
             await BatchSubscribe(pending.Values.ToArray());
         }
 
@@ -338,7 +337,6 @@ namespace WalletConnectSharp.Core.Controllers
             _cached = Values;
             _subscriptions.Clear();
             _topicMap.Clear();
-            _initialized = false;
         }
 
         protected virtual async void OnConnect()
@@ -353,9 +351,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!RestartInProgress) return;
 
-            _logger.Log("waiting for restart");
             await restartTask.Task;
-            _logger.Log("restart completed");
         }
 
         protected virtual void OnSubscribe(string id, PendingSubscription @params)

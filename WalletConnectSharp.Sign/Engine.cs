@@ -543,10 +543,14 @@ namespace WalletConnectSharp.Sign
                         return;
 
                     if (args.VerifiedContext.Validation == Validation.Invalid)
+                    {
                         sessionProposeTask.SetException(new Exception(
                             $"Could not validate, invalid validation status {args.VerifiedContext.Validation} for origin {args.VerifiedContext.Origin}"));
+                    }
                     else
+                    {
                         sessionProposeTask.SetResult(proposal);
+                    }
                 },
                 h => Client.SessionProposed += h,
                 h => Client.SessionProposed -= h
@@ -852,7 +856,7 @@ namespace WalletConnectSharp.Sign
         /// </summary>
         /// <param name="topic">The topic of the session to disconnect</param>
         /// <param name="reason">An (optional) error reason for the disconnect</param>
-        public async Task Disconnect(string topic, Error reason)
+        public async Task Disconnect(string topic, Error reason = null)
         {
             IsInitialized();
             var error = reason ?? Error.FromErrorType(ErrorType.USER_DISCONNECTED);

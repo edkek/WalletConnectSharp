@@ -30,31 +30,29 @@ namespace WalletConnectSharp.Core.Models.Expirer
         /// be converted and stored to either the ID field or Topic field
         /// </summary>
         /// <param name="target">The <see cref="Expiration.Target"/> to convert</param>
-        /// <exception cref="Exception">If the format for the given <see cref="Expiration.Target"/> is invalid</exception>
+        /// <exception cref="FormatException">If the format for the given <see cref="Expiration.Target"/> is invalid</exception>
         public ExpirerTarget(string target)
         {
-            var values = target.Split(":");
-            var type = values[0];
-            var value = values[1];
+            var values = target.Split(':');
+            if (values.Length != 2)
+            {
+                throw new FormatException($"Invalid target format: {target}. Expected format: 'type:value'.");
+            }
+
+            var (type, value) = (values[0], values[1]);
 
             switch (type)
             {
                 case "topic":
                     Topic = value;
                     break;
-                case "id":
-                {
-                    long id;
-                    var success = long.TryParse(value, out id);
-
-                    if (!success)
-                        throw new Exception($"Cannot parse id {value}");
-
+                case "id" when long.TryParse(value, out var id):
                     Id = id;
                     break;
-                }
+                case "id":
+                    throw new FormatException($"Cannot parse id {value} as a long.");
                 default:
-                    throw new Exception($"Invalid target, expected id:number or topic:string, got {type}:{value}");
+                    throw new FormatException($"Invalid target type: {type}. Expected 'id' or 'topic'.");
             }
         }
     }

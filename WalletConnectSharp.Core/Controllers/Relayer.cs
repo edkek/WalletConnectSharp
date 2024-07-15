@@ -414,7 +414,9 @@ namespace WalletConnectSharp.Core.Controllers
 
                 void RejectTransportOpen(object sender, EventArgs @event)
                 {
-                    task2.TrySetException(new Exception("closeTransport called before connection was established"));
+                    task2.TrySetException(
+                        new IOException("The transport was closed before the connection was established.")
+                    );
                 }
 
                 async void Task2()
