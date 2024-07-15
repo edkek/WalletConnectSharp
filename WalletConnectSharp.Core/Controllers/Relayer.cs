@@ -227,9 +227,6 @@ namespace WalletConnectSharp.Core.Controllers
             if (this._transportExplicitlyClosed)
                 return;
 
-            // Attempt to reconnect after one second
-            await Task.Delay(1000);
-
             await RestartTransport();
         }
 
