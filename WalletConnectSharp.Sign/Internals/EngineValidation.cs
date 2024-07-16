@@ -395,7 +395,7 @@ namespace WalletConnectSharp.Sign
             return matches.Count() == a.Length;
         }
 
-        private string[] GetAccountsChains(string[] accounts)
+        private static string[] GetAccountsChains(string[] accounts)
         {
             List<string> chains = [];
             foreach (var account in accounts)
@@ -419,21 +419,30 @@ namespace WalletConnectSharp.Sign
 
             if (!HasOverlap(paramsKeys, sessionKeys)) return false;
 
-            foreach (var key in sessionKeys)
+            try
             {
-                var value = session.Namespaces[key];
-                var accounts = value.Accounts;
-                var methods = value.Methods;
-                var events = value.Events;
-                var chains = GetAccountsChains(accounts);
-                var requiredNamespace = requiredNamespaces[key];
+                foreach (var key in sessionKeys)
+                {
+                    var value = session.Namespaces[key];
+                    var accounts = value.Accounts;
+                    var methods = value.Methods;
+                    var events = value.Events;
+                    var chains = GetAccountsChains(accounts);
+                    var requiredNamespace = requiredNamespaces[key];
 
-                if (!HasOverlap(requiredNamespace.Chains, chains) ||
-                    !HasOverlap(requiredNamespace.Methods, methods) ||
-                    !HasOverlap(requiredNamespace.Events, events))
-                    compatible = false;
+                    if (!HasOverlap(requiredNamespace.Chains, chains) ||
+                        !HasOverlap(requiredNamespace.Methods, methods) ||
+                        !HasOverlap(requiredNamespace.Events, events))
+                    {
+                        compatible = false;
+                    }
+                }
             }
-
+            catch (KeyNotFoundException e)
+            {
+                return false;
+            }
+            
             return compatible;
         }
     }

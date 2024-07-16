@@ -159,7 +159,6 @@ namespace WalletConnectSharp.Sign.Test
             Assert.NotNull(proposal.OptionalNamespaces);
             Assert.True(proposal.SessionProperties == null || proposal.SessionProperties.Count > 0);
             Assert.NotNull(proposal.Expiry);
-            Assert.NotNull(proposal.Id);
             Assert.NotNull(proposal.Relays);
             Assert.NotNull(proposal.Proposer);
             Assert.NotNull(proposal.PairingTopic);
@@ -169,6 +168,9 @@ namespace WalletConnectSharp.Sign.Test
             var sessionData = await connectData.Approval;
             await approveData.Acknowledged();
 
+            Assert.True(clientA.Find(dappConnectOptions.RequiredNamespaces).Length != 0);
+            Assert.True(clientA.Find(new RequiredNamespaces()).Length == 0);
+            
             return sessionData;
         }
 
@@ -323,6 +325,75 @@ namespace WalletConnectSharp.Sign.Test
             Assert.Equal(eventResult, a * b);
             Assert.Equal(eventResult, testData.a * testData.b);
             Assert.Equal(eventResult, responseReturned.result);
+        }
+
+        [Fact] [Trait("Category", "integration")]
+        public async Task TestSessionRequestInvalidMethod()
+        {
+            await _cryptoFixture.WaitForClientsReady();
+
+            var validMethod = "test_method";
+
+            var dappConnectOptions = new ConnectOptions()
+            {
+                RequiredNamespaces = new RequiredNamespaces()
+                {
+                    {
+                        "eip155", new ProposedNamespace()
+                        {
+                            Methods = new[]
+                            {
+                                validMethod
+                            },
+                            Chains = new[]
+                            {
+                                "eip155:1",
+                                "eip155:10"
+                            },
+                            Events = new[]
+                            {
+                                "chainChanged",
+                                "accountsChanged"
+                            }
+                        }
+                    }
+                }
+            };
+
+            var dappClient = ClientA;
+            var connectData = await dappClient.Connect(dappConnectOptions);
+
+            var walletClient = ClientB;
+            var proposal = await walletClient.Pair(connectData.Uri);
+
+            var approveData = await walletClient.Approve(proposal, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+
+            var sessionData = await connectData.Approval;
+            await approveData.Acknowledged();
+
+            var testData = new TestRequest2
+            {
+                x = "test", y = 4
+            };
+
+            // Use TestRequest2 which isn't included in the required namespaces
+            await Assert.ThrowsAsync<NamespacesException>(() => dappClient.Engine.Request<TestRequest2, TestResponse>(sessionData.Topic, testData));
+        }
+
+        [Fact] [Trait("Category", "integration")]
+        public async Task TestInvalidConnect()
+        {
+            await _cryptoFixture.WaitForClientsReady();
+            var dappClient = ClientA;
+
+            await Assert.ThrowsAsync<ArgumentNullException>(() => dappClient.Connect(null));
+
+            var connectOptions = new ConnectOptions
+            {
+                PairingTopic = "123"
+            };
+
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => dappClient.Connect(connectOptions));
         }
         
         [Fact, Trait("Category", "integration")]
