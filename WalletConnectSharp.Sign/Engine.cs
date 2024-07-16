@@ -452,7 +452,7 @@ namespace WalletConnectSharp.Sign
 
             if (string.IsNullOrWhiteSpace(topic))
             {
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, $"connect() pairing topic: {topic}");
+                throw new InvalidOperationException("The pairing topic is empty");
             }
 
             var id = await MessageHandler.SendRequest<SessionPropose, SessionProposeResponse>(topic, proposal);

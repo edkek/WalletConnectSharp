@@ -489,7 +489,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
+                throw new InvalidOperationException($"{nameof(Relayer)} module not initialized.");
             }
         }
 

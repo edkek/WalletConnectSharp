@@ -126,7 +126,8 @@ namespace WalletConnectSharp.Core.Controllers
         public async Task<PairingStruct> Pair(string uri, bool activatePairing = true)
         {
             IsInitialized();
-            await IsValidPair(uri);
+            ValidateUri(uri);
+            
             var uriParams = ParseUri(uri);
 
             var topic = uriParams.Topic;
@@ -175,7 +176,7 @@ namespace WalletConnectSharp.Core.Controllers
             var pathStart = uri.IndexOf(":", StringComparison.Ordinal);
             int? pathEnd = uri.IndexOf("?", StringComparison.Ordinal) != -1
                 ? uri.IndexOf("?", StringComparison.Ordinal)
-                : (int?)null;
+                : null;
             var protocol = uri.Substring(0, pathStart);
 
             string path;
@@ -183,8 +184,9 @@ namespace WalletConnectSharp.Core.Controllers
             else path = uri.Substring(pathStart + 1);
 
             var requiredValues = path.Split("@");
-            string queryString = pathEnd != null ? uri.Substring((int)pathEnd) : "";
-            var queryParams = Regex.Matches(queryString, "([^?=&]+)(=([^&]*))?").Cast<Match>()
+            var queryString = pathEnd != null ? uri[(int)pathEnd..] : "";
+            var queryParams = Regex
+                .Matches(queryString, "([^?=&]+)(=([^&]*))?")
                 .ToDictionary(x => x.Groups[1].Value, x => x.Groups[3].Value);
 
             var result = new UriParameters()
@@ -195,8 +197,7 @@ namespace WalletConnectSharp.Core.Controllers
                 SymKey = queryParams["symKey"],
                 Relay = new ProtocolOptions()
                 {
-                    Protocol = queryParams["relay-protocol"],
-                    Data = queryParams.ContainsKey("relay-data") ? queryParams["relay-data"] : null,
+                    Protocol = queryParams["relay-protocol"], Data = queryParams.GetValueOrDefault("relay-data")
                 }
             };
 
@@ -351,7 +352,7 @@ namespace WalletConnectSharp.Core.Controllers
         private Task Cleanup()
         {
             List<string> pairingTopics = (from pair in this.Store.Values.Where(e => e.Expiry != null)
-                where Clock.IsExpired(pair.Expiry.Value)
+                where pair.Expiry != null && Clock.IsExpired(pair.Expiry.Value)
                 select pair.Topic).ToList();
 
             return Task.WhenAll(
@@ -362,22 +363,22 @@ namespace WalletConnectSharp.Core.Controllers
         private async Task IsValidPairingTopic(string topic)
         {
             if (string.IsNullOrWhiteSpace(topic))
-                throw WalletConnectException.FromType(ErrorType.MISSING_OR_INVALID,
-                    $"pairing topic should be a string {topic}");
+            {
+                throw new ArgumentNullException(nameof(topic));
+            }
 
             if (!this.Store.Keys.Contains(topic))
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY,
-                    $"pairing topic doesn't exist {topic}");
+                throw new KeyNotFoundException($"Pairing topic {topic} not found.");
 
             var expiry = this.Store.Get(topic).Expiry;
             if (expiry != null && Clock.IsExpired(expiry.Value))
             {
                 await DeletePairing(topic);
-                throw WalletConnectException.FromType(ErrorType.EXPIRED, $"pairing topic: {topic}");
+                throw new ExpiredException($"Pairing topic {topic} has expired.");
             }
         }
 
-        private bool IsValidUrl(string url)
+        private static bool IsValidUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url)) return false;
 
@@ -392,18 +393,17 @@ namespace WalletConnectSharp.Core.Controllers
             }
         }
 
-        private Task IsValidPair(string uri)
+        private void ValidateUri(string uri)
         {
             if (!IsValidUrl(uri))
-                throw WalletConnectException.FromType(ErrorType.MISSING_OR_INVALID, $"pair() uri: {uri}");
-            return Task.CompletedTask;
+                throw new FormatException($"Invalid URI format: {uri}");
         }
 
         private void IsInitialized()
         {
             if (!_initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, this.Name);
+                throw new InvalidOperationException($"{nameof(Pairing)} module not initialized.");
             }
         }
 
@@ -457,7 +457,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (string.IsNullOrWhiteSpace(topic))
             {
-                throw WalletConnectException.FromType(ErrorType.MISSING_OR_INVALID, $"disconnect() params: {topic}");
+                throw new ArgumentNullException(nameof(topic));
             }
 
             await IsValidPairingTopic(topic);

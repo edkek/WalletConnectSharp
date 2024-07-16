@@ -1,5 +1,4 @@
 using WalletConnectSharp.Common.Logging;
-using WalletConnectSharp.Common.Model.Errors;
 using WalletConnectSharp.Common.Model.Relay;
 using WalletConnectSharp.Common.Utils;
 using WalletConnectSharp.Core.Interfaces;
@@ -249,7 +248,7 @@ namespace WalletConnectSharp.Core.Controllers
 
             if (Subscriptions.Count > 0)
             {
-                throw WalletConnectException.FromType(ErrorType.RESTORE_WILL_OVERRIDE, Name);
+                throw new InvalidOperationException($"Restoring will override existing data in {Name}."); 
             }
 
             _cached = persisted;
@@ -441,10 +440,12 @@ namespace WalletConnectSharp.Core.Controllers
 
         protected virtual ActiveSubscription GetSubscription(string id)
         {
-            if (!_subscriptions.ContainsKey(id))
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, Name + ": " + id);
+            if (!_subscriptions.TryGetValue(id, out var subscription))
+            {
+                throw new KeyNotFoundException($"No subscription found with id: {id}.");
+            }
 
-            return _subscriptions[id];
+            return subscription;
         }
 
         protected virtual bool HasSubscription(string id, string topic)
@@ -467,7 +468,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!_initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
+                throw new InvalidOperationException($"{nameof(Subscriber)} module not initialized.");
             }
         }
 

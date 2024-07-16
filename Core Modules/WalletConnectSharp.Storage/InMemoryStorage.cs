@@ -78,7 +78,7 @@ namespace WalletConnectSharp.Storage
         {
             if (!Initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, "Storage");
+                throw new InvalidOperationException($"{nameof(Storage)} module not initialized.");
             }
         }
 

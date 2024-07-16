@@ -570,8 +570,7 @@ namespace WalletConnectSharp.Crypto
         {
             if (!this._initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED,
-                    new Dictionary<string, object>() { { "Name", Name } });
+                throw new InvalidOperationException($"{nameof(Crypto)} module not initialized.");
             }
         }
 
@@ -659,12 +658,12 @@ namespace WalletConnectSharp.Crypto
 
         private async Task<byte[]> GetClientSeed()
         {
-            var seed = "";
+            string seed;
             try
             {
                 seed = await KeyChain.Get(CryptoClientSeed);
             }
-            catch (Exception e)
+            catch (InvalidOperationException)
             {
                 byte[] seedRaw = new byte[32];
                 RandomNumberGenerator.Fill(seedRaw);

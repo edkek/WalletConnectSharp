@@ -192,7 +192,7 @@ namespace WalletConnectSharp.Core.Controllers
                 throw WalletConnectException.FromType(ErrorType.MISMATCHED_TOPIC, $"{Name}: {id}");
             }*/
 
-            return Task.FromResult<JsonRpcRecord<T, TR>>(record);
+            return Task.FromResult(record);
         }
 
         /// <summary>
@@ -243,19 +243,21 @@ namespace WalletConnectSharp.Core.Controllers
         /// <returns>True if the request with the given topic and id exists, false otherwise</returns>
         public Task<bool> Exists(string topic, long id)
         {
+            IsInitialized();
+
+            if (_records.ContainsKey(id))
+            {
+                return Task.FromResult(false);
+            }
+
             try
             {
-                IsInitialized();
-                if (_records.ContainsKey(id)) return Task.FromResult<bool>(false);
                 var record = GetRecord(id);
-
                 return Task.FromResult(record.Topic == topic);
             }
-            catch (WalletConnectException e)
+            catch (KeyNotFoundException)
             {
-                if (e.CodeType == ErrorType.NO_MATCHING_KEY)
-                    return Task.FromResult(false);
-                throw;
+                return Task.FromResult(false);
             }
         }
 
@@ -269,7 +271,7 @@ namespace WalletConnectSharp.Core.Controllers
             if (await _core.Storage.HasItem(StorageKey))
                 return await _core.Storage.GetItem<JsonRpcRecord<T, TR>[]>(StorageKey);
 
-            return Array.Empty<JsonRpcRecord<T, TR>>();
+            return [];
         }
 
         private JsonRpcRecord<T, TR> GetRecord(long id)
@@ -278,8 +280,7 @@ namespace WalletConnectSharp.Core.Controllers
 
             if (!_records.TryGetValue(id, out var record))
             {
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY,
-                    new Dictionary<string, object>() { { "Tag", $"{Name}: {id}" } });
+                throw new KeyNotFoundException($"No matching {Name} with id: {id}.");
             }
 
             return record;
@@ -300,7 +301,7 @@ namespace WalletConnectSharp.Core.Controllers
                 return;
             if (_records.Count > 0)
             {
-                throw WalletConnectException.FromType(ErrorType.RESTORE_WILL_OVERRIDE, Name);
+                throw new InvalidOperationException($"Restoring will override existing data in {Name}."); 
             }
 
             _cached = persisted;
@@ -322,7 +323,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!_initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
+                throw new InvalidOperationException($"{nameof(JsonRpcHistory<T, TR>)} module not initialized.");
             }
         }
 

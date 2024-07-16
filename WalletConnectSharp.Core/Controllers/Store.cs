@@ -134,7 +134,7 @@ namespace WalletConnectSharp.Core.Controllers
                         map.Add(value.Key, value);
                 }
 
-                cached = Array.Empty<TValue>();
+                cached = [];
                 initialized = true;
             }
         }
@@ -275,12 +275,12 @@ namespace WalletConnectSharp.Core.Controllers
 
         protected virtual TValue GetData(TKey key)
         {
-            if (!map.ContainsKey(key))
+            if (!map.TryGetValue(key, out var data))
             {
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, $"{Name}: {key}");
+                throw new KeyNotFoundException($"Key {key} not found in {Name}.");
             }
 
-            return map[key];
+            return data;
         }
 
         protected virtual Task Persist()
@@ -295,7 +295,7 @@ namespace WalletConnectSharp.Core.Controllers
             if (persisted.Length == 0) return;
             if (map.Count > 0)
             {
-                throw WalletConnectException.FromType(ErrorType.RESTORE_WILL_OVERRIDE, Name);
+                throw new InvalidOperationException($"Restoring will override existing data in {Name}."); 
             }
 
             cached = persisted;
@@ -305,7 +305,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
+                throw new InvalidOperationException($"{nameof(Store<TKey, TValue>)} module not initialized.");
             }
         }
 

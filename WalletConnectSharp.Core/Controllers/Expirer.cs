@@ -1,4 +1,3 @@
-using WalletConnectSharp.Common.Model.Errors;
 using WalletConnectSharp.Common.Utils;
 using WalletConnectSharp.Core.Interfaces;
 using WalletConnectSharp.Core.Models.Expirer;
@@ -19,7 +18,7 @@ namespace WalletConnectSharp.Core.Controllers
         protected bool Disposed;
 
         private Dictionary<string, Expiration> _expirations = new Dictionary<string, Expiration>();
-        private bool initialized = false;
+        private bool initialized;
         private Expiration[] _cached = Array.Empty<Expiration>();
         private ICore _core;
 
@@ -286,7 +285,7 @@ namespace WalletConnectSharp.Core.Controllers
             if (persisted.Length == 0) return;
             if (_expirations.Count > 0)
             {
-                throw WalletConnectException.FromType(ErrorType.RESTORE_WILL_OVERRIDE, Name);
+                throw new InvalidOperationException($"Restoring will override existing data in {Name}."); 
             }
 
             _cached = persisted;
@@ -323,7 +322,6 @@ namespace WalletConnectSharp.Core.Controllers
         private void RegisterEventListeners()
         {
             _core.HeartBeat.OnPulse += CheckExpirations;
-            //_core.HeartBeat.On(HeartbeatEvents.Pulse, CheckExpirations);
 
             this.Created += Persist;
             this.Expired += Persist;
@@ -334,7 +332,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
+                throw new InvalidOperationException($"{nameof(Expirer)} module not initialized.");
             }
         }
 

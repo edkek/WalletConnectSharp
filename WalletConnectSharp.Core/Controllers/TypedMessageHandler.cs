@@ -6,6 +6,7 @@ using WalletConnectSharp.Common.Model.Errors;
 using WalletConnectSharp.Common.Utils;
 using WalletConnectSharp.Core.Interfaces;
 using WalletConnectSharp.Core.Models;
+using WalletConnectSharp.Core.Models.History;
 using WalletConnectSharp.Core.Models.Relay;
 using WalletConnectSharp.Crypto.Models;
 using WalletConnectSharp.Network.Models;
@@ -123,6 +124,7 @@ namespace WalletConnectSharp.Core.Controllers
                 }
                 catch (JsonException)
                 {
+                    return;
                 }
             }
 
@@ -153,7 +155,7 @@ namespace WalletConnectSharp.Core.Controllers
 
                     await responseCallback(topic, payload);
                 }
-                catch (Exception ex) when (ex is JsonReaderException or JsonSerializationException)
+                catch (Exception ex) when (ex is JsonException)
                 {
                     if (!expectingResult)
                         return;
@@ -168,25 +170,25 @@ namespace WalletConnectSharp.Core.Controllers
 
                 var payload = e.Payload;
 
+                JsonRpcRecord<T, TR> record;
                 try
                 {
-                    var record = await rpcHistory.Get(topic, payload.Id);
-
-                    // ignored if we can't find anything in the history
-                    if (record == null) return;
-                    var resMethod = record.Request.Method;
-
-                    // Trigger the true response event, which will trigger ResponseCallback
-                    messageEventHandlerMap[$"response_{resMethod}"](this,
-                        new MessageEvent() { Topic = topic, Message = message });
+                    record = await rpcHistory.Get(topic, payload.Id);
                 }
-                catch (WalletConnectException err)
+                catch (KeyNotFoundException)
                 {
-                    if (err.CodeType != ErrorType.NO_MATCHING_KEY)
-                        throw;
-
-                    // ignored if we can't find anything in the history
+                    // Ignored if we can't find anything in the history
+                    return;
                 }
+
+                var resMethod = record.Request.Method;
+
+                // Trigger the true response event, which will trigger ResponseCallback
+                messageEventHandlerMap[$"response_{resMethod}"](this,
+                    new MessageEvent
+                    {
+                        Topic = topic, Message = message
+                    });
             }
 
             messageEventHandlerMap[$"request_{method}"] += RequestCallback;
