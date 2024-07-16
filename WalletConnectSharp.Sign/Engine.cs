@@ -358,9 +358,9 @@ namespace WalletConnectSharp.Sign
         /// parsed from the given uri</returns>
         public UriParameters ParseUri(string uri)
         {
-            var pathStart = uri.IndexOf(":", StringComparison.Ordinal);
-            int? pathEnd = uri.IndexOf("?", StringComparison.Ordinal) != -1
-                ? uri.IndexOf("?", StringComparison.Ordinal)
+            var pathStart = uri.IndexOf(':');
+            var pathEnd = uri.IndexOf('?') != -1
+                ? uri.IndexOf('?')
                 : (int?)null;
             var protocol = uri.Substring(0, pathStart);
 
@@ -370,8 +370,7 @@ namespace WalletConnectSharp.Sign
 
             var requiredValues = path.Split("@");
             string queryString = pathEnd != null ? uri.Substring((int)pathEnd) : "";
-            var queryParams = Regex.Matches(queryString, "([^?=&]+)(=([^&]*))?").Cast<Match>()
-                .ToDictionary(x => x.Groups[1].Value, x => x.Groups[3].Value);
+            var queryParams = UrlUtils.ParseQs(queryString);
 
             var result = new UriParameters()
             {

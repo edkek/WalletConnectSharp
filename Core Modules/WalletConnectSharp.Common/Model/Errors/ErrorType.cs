@@ -29,6 +29,7 @@ namespace WalletConnectSharp.Common.Model.Errors
         JSONRPC_REQUEST_METHOD_UNSUPPORTED = 4200,
         DISCONNECTED_ALL_CHAINS = 4900,
         DISCONNECTED_TARGET_CHAIN = 4901,
+        
         // 5000 (CAIP-25)
         DISAPPROVED_CHAINS = 5000,
         DISAPPROVED_JSONRPC = 5001,

@@ -22,92 +22,17 @@
                 case ErrorType.GENERIC:
                     errorMessage = "{message}";
                     break;
-                // case ErrorType.MISSING_OR_INVALID:
-                //     errorMessage = "Missing or invalid";
-                //     break;
-                // case ErrorType.MISSING_RESPONSE:
-                //     errorMessage = "Response is required for approved {context} proposals";
-                //     break;
-                // case ErrorType.MISSING_DECRYPT_PARAMS:
-                //     errorMessage = "Decrypt params required for {context}";
-                //     break;
-                // case ErrorType.INVALID_UPDATE_REQUEST:
-                //     errorMessage = "Invalid {context} update request";
-                //     break;
-                // case ErrorType.INVALID_UPGRADE_REQUEST:
-                //     errorMessage = "Invalid {context} upgrade request";
-                //     break;
-                // case ErrorType.INVALID_EXTEND_REQUEST:
-                //     errorMessage = "Invalid {context} extend request";
-                //     break;
-                // case ErrorType.INVALID_STORAGE_KEY_NAME:
-                //     errorMessage = "Invalid storage key name: {name}";
-                //     break;
-                // case ErrorType.RECORD_ALREADY_EXISTS:
-                //     errorMessage = "Record already exists for {context} matching id: {id}";
-                //     break;
-                // case ErrorType.RESTORE_WILL_OVERRIDE:
-                //     errorMessage = "Restore will override already set {context}";
-                //     break;
-                // case ErrorType.NO_MATCHING_ID:
-                //     errorMessage = "No matching {context} with id: {id}";
-                //     break;
-                // case ErrorType.NO_MATCHING_TOPIC:
-                //     errorMessage = "No matching {context} with topic {topic}";
-                //     break;
-                // case ErrorType.NO_MATCHING_RESPONSE:
-                //     errorMessage = "No response found in pending {context} proposal";
-                //     break;
-                // case ErrorType.NO_MATCHING_KEY:
-                //     errorMessage = "No matching key with tag: {tag}";
-                //     break;
-                // case ErrorType.UNKNOWN_JSONRPC_METHOD:
-                //     errorMessage = "Unknown JSON-RPC Method Requested: {method}";
-                //     break;
-                // case ErrorType.MISMATCHED_TOPIC:
-                //     errorMessage = "Mismatched topic for {context} with id: {id}";
-                //     break;
-                // case ErrorType.MISMATCHED_ACCOUNTS:
-                //     errorMessage = "Invalid accounts with mismatched chains: {mismatched}";
-                //     break;
-                // case ErrorType.SETTLED:
-                //     errorMessage = "{context} settled";
-                //     break;
-                // case ErrorType.NOT_APPROVED:
-                //     errorMessage = "{context} not approved";
-                //     break;
-                // case ErrorType.PROPOSAL_RESPONDED:
-                //     errorMessage = "{context} proposal responded";
-                //     break;
-                // case ErrorType.RESPONSE_ACKNOWLEDGED:
-                //     errorMessage = "{context} response acknowledge";
-                //     break;
-                // case ErrorType.EXPIRED:
-                //     errorMessage = "{context} expired";
-                //     break;
-                // case ErrorType.DELETED:
-                //     errorMessage = "{context} deleted";
-                //     break;
-                // case ErrorType.RESUBSCRIBED:
-                //     errorMessage = "Subscription resubscribed with topic: {topic}";
-                //     break;
-                // case ErrorType.NOT_INITIALIZED:
-                //     errorMessage = "{params} was not initialized";
-                //     break;
-                // case ErrorType.SETTLE_TIMEOUT:
-                //     errorMessage = "{context} failed to settle after {timeout} seconds";
-                //     break;
                 case ErrorType.JSONRPC_REQUEST_TIMEOUT:
                     errorMessage = "JSON-RPC Request timeout after {timeout} seconds: {method}";
                     break;
                 case ErrorType.UNAUTHORIZED_TARGET_CHAIN:
-                    errorMessage = "Unauthorized Target ChainId Requested: {chainId}";
+                    errorMessage = "Unauthorized Target ChainId Requested/";
                     break;
                 case ErrorType.UNAUTHORIZED_JSON_RPC_METHOD:
-                    errorMessage = "Unauthorized JSON-RPC Method Requested: {method}";
+                    errorMessage = "Unauthorized JSON-RPC Method Requested.";
                     break;
                 case ErrorType.UNAUTHORIZED_NOTIFICATION_TYPE:
-                    errorMessage = "Unauthorized Notification Type Requested: {type}";
+                    errorMessage = "Unauthorized Notification Type Requested.";
                     break;
                 case ErrorType.UNAUTHORIZED_UPDATE_REQUEST:
                     errorMessage = "Unauthorized {context} update request";
@@ -166,9 +91,6 @@
                 case ErrorType.UNKNOWN:
                     errorMessage = "Unknown error {params}";
                     break;
-                // case ErrorType.NON_CONFORMING_NAMESPACES:
-                //     errorMessage = @params["message"].ToString();
-                //     break;
             }
 
             if (context == null)

@@ -185,9 +185,7 @@ namespace WalletConnectSharp.Core.Controllers
 
             var requiredValues = path.Split("@");
             var queryString = pathEnd != null ? uri[(int)pathEnd..] : "";
-            var queryParams = Regex
-                .Matches(queryString, "([^?=&]+)(=([^&]*))?")
-                .ToDictionary(x => x.Groups[1].Value, x => x.Groups[3].Value);
+            var queryParams = UrlUtils.ParseQs(queryString);
 
             var result = new UriParameters()
             {
