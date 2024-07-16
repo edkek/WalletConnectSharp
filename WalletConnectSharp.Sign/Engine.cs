@@ -358,9 +358,9 @@ namespace WalletConnectSharp.Sign
         /// parsed from the given uri</returns>
         public UriParameters ParseUri(string uri)
         {
-            var pathStart = uri.IndexOf(":", StringComparison.Ordinal);
-            int? pathEnd = uri.IndexOf("?", StringComparison.Ordinal) != -1
-                ? uri.IndexOf("?", StringComparison.Ordinal)
+            var pathStart = uri.IndexOf(':');
+            var pathEnd = uri.IndexOf('?') != -1
+                ? uri.IndexOf('?')
                 : (int?)null;
             var protocol = uri.Substring(0, pathStart);
 
@@ -370,8 +370,7 @@ namespace WalletConnectSharp.Sign
 
             var requiredValues = path.Split("@");
             string queryString = pathEnd != null ? uri.Substring((int)pathEnd) : "";
-            var queryParams = Regex.Matches(queryString, "([^?=&]+)(=([^&]*))?").Cast<Match>()
-                .ToDictionary(x => x.Groups[1].Value, x => x.Groups[3].Value);
+            var queryParams = UrlUtils.ParseQs(queryString);
 
             var result = new UriParameters()
             {
@@ -452,7 +451,7 @@ namespace WalletConnectSharp.Sign
 
             if (string.IsNullOrWhiteSpace(topic))
             {
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, $"connect() pairing topic: {topic}");
+                throw new InvalidOperationException("The pairing topic is empty");
             }
 
             var id = await MessageHandler.SendRequest<SessionPropose, SessionProposeResponse>(topic, proposal);
@@ -543,10 +542,14 @@ namespace WalletConnectSharp.Sign
                         return;
 
                     if (args.VerifiedContext.Validation == Validation.Invalid)
+                    {
                         sessionProposeTask.SetException(new Exception(
                             $"Could not validate, invalid validation status {args.VerifiedContext.Validation} for origin {args.VerifiedContext.Origin}"));
+                    }
                     else
+                    {
                         sessionProposeTask.SetResult(proposal);
+                    }
                 },
                 h => Client.SessionProposed += h,
                 h => Client.SessionProposed -= h
@@ -852,7 +855,7 @@ namespace WalletConnectSharp.Sign
         /// </summary>
         /// <param name="topic">The topic of the session to disconnect</param>
         /// <param name="reason">An (optional) error reason for the disconnect</param>
-        public async Task Disconnect(string topic, Error reason)
+        public async Task Disconnect(string topic, Error reason = null)
         {
             IsInitialized();
             var error = reason ?? Error.FromErrorType(ErrorType.USER_DISCONNECTED);

@@ -8,35 +8,6 @@ namespace WalletConnectSharp.Common.Model.Errors
     {
         // 0 (Generic)
         GENERIC = 0,
-        
-        // 10 (Internal)
-        NON_CONFORMING_NAMESPACES = 9,
-
-        // 1000 (Internal)
-        MISSING_OR_INVALID = 1000,
-        MISSING_RESPONSE = 1001,
-        MISSING_DECRYPT_PARAMS = 1002,
-        INVALID_UPDATE_REQUEST = 1003,
-        INVALID_UPGRADE_REQUEST = 1004,
-        INVALID_EXTEND_REQUEST = 1005,
-        INVALID_STORAGE_KEY_NAME = 1020,
-        RECORD_ALREADY_EXISTS = 1100,
-        RESTORE_WILL_OVERRIDE = 1200,
-        NO_MATCHING_ID = 1300,
-        NO_MATCHING_TOPIC = 1301,
-        NO_MATCHING_RESPONSE = 1302,
-        NO_MATCHING_KEY = 1303,
-        UNKNOWN_JSONRPC_METHOD = 1400,
-        MISMATCHED_TOPIC = 1500,
-        MISMATCHED_ACCOUNTS = 1501,
-        SETTLED = 1600,
-        NOT_APPROVED = 1601,
-        PROPOSAL_RESPONDED = 1602,
-        RESPONSE_ACKNOWLEDGED = 1603,
-        EXPIRED = 1604,
-        DELETED = 1605,
-        RESUBSCRIBED = 1606,
-        NOT_INITIALIZED = 1607,
 
         // 2000 (Timeout)
         SETTLE_TIMEOUT = 2000,
@@ -58,7 +29,7 @@ namespace WalletConnectSharp.Common.Model.Errors
         JSONRPC_REQUEST_METHOD_UNSUPPORTED = 4200,
         DISCONNECTED_ALL_CHAINS = 4900,
         DISCONNECTED_TARGET_CHAIN = 4901,
-
+        
         // 5000 (CAIP-25)
         DISAPPROVED_CHAINS = 5000,
         DISAPPROVED_JSONRPC = 5001,
@@ -67,7 +38,12 @@ namespace WalletConnectSharp.Common.Model.Errors
         UNSUPPORTED_JSONRPC = 5101,
         UNSUPPORTED_NOTIFICATION = 5102,
         UNSUPPORTED_ACCOUNTS = 5103,
-        USER_DISCONNECTED = 5900,
+
+        // 6000 (Reason)
+        USER_DISCONNECTED = 6000,
+
+        // 8000 (Session)
+        SESSION_REQUEST_EXPIRED = 8000,
 
         // 9000 (Unknown)
         UNKNOWN = 9000,

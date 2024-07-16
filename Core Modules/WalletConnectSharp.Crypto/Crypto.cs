@@ -159,11 +159,16 @@ namespace WalletConnectSharp.Crypto
             generator.Init(options);
 
             var keypair = generator.GenerateKeyPair();
-            var publicKeyData = keypair.Public as X25519PublicKeyParameters;
-            var privateKeyData = keypair.Private as X25519PrivateKeyParameters;
 
-            if (publicKeyData == null || privateKeyData == null)
-                throw new Exception("Could not generate keypair");
+            if (keypair.Public is not X25519PublicKeyParameters publicKeyData)
+            {
+                throw new InvalidCastException($"Public key is not an {nameof(X25519PublicKeyParameters)}");
+            }
+
+            if (keypair.Private is not X25519PrivateKeyParameters privateKeyData)
+            {
+                throw new InvalidCastException($"Private key is not an {nameof(X25519PrivateKeyParameters)}");
+            }
 
             var publicKey = publicKeyData.GetEncoded().ToHex();
             var privateKey = privateKeyData.GetEncoded().ToHex();
@@ -565,8 +570,7 @@ namespace WalletConnectSharp.Crypto
         {
             if (!this._initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED,
-                    new Dictionary<string, object>() { { "Name", Name } });
+                throw new InvalidOperationException($"{nameof(Crypto)} module not initialized.");
             }
         }
 
@@ -654,12 +658,12 @@ namespace WalletConnectSharp.Crypto
 
         private async Task<byte[]> GetClientSeed()
         {
-            var seed = "";
+            string seed;
             try
             {
                 seed = await KeyChain.Get(CryptoClientSeed);
             }
-            catch (Exception e)
+            catch (InvalidOperationException)
             {
                 byte[] seedRaw = new byte[32];
                 RandomNumberGenerator.Fill(seedRaw);

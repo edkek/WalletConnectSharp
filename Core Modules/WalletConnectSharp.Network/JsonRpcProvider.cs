@@ -174,7 +174,7 @@ namespace WalletConnectSharp.Network
         public async Task Connect()
         {
             if (_connection == null)
-                throw new Exception("No connection is set");
+                throw new InvalidOperationException("Connection is null");
 
             await Connect(_connection);
         }

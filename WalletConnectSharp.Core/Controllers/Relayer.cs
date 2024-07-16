@@ -227,9 +227,6 @@ namespace WalletConnectSharp.Core.Controllers
             if (this._transportExplicitlyClosed)
                 return;
 
-            // Attempt to reconnect after one second
-            await Task.Delay(1000);
-
             await RestartTransport();
         }
 
@@ -417,7 +414,9 @@ namespace WalletConnectSharp.Core.Controllers
 
                 void RejectTransportOpen(object sender, EventArgs @event)
                 {
-                    task2.TrySetException(new Exception("closeTransport called before connection was established"));
+                    task2.TrySetException(
+                        new IOException("The transport was closed before the connection was established.")
+                    );
                 }
 
                 async void Task2()
@@ -490,7 +489,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
+                throw new InvalidOperationException($"{nameof(Relayer)} module not initialized.");
             }
         }
 

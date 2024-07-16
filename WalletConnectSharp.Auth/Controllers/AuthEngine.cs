@@ -281,10 +281,7 @@ public partial class AuthEngine : IAuthEngine
             {
                 this.Client.OnAuthResponse(new AuthErrorResponse()
                 {
-                    Id = id, Topic = topic, Error = Error.FromErrorType(ErrorType.GENERIC, new Dictionary<string, object>()
-                    {
-                        {"Message", "Invalid signature"}
-                    })
+                    Id = id, Topic = topic, Error = Error.FromErrorType(ErrorType.GENERIC, "Invalid signature")
                 });
             }
             else
@@ -390,7 +387,7 @@ public partial class AuthEngine : IAuthEngine
     {
         if (!this.initialized)
         {
-            throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, Name);
+            throw new InvalidOperationException($"{nameof(AuthEngine)} module not initialized.");
         }
     }
 

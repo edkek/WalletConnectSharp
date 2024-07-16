@@ -200,7 +200,7 @@ public class Web3WalletEngine : IWeb3WalletEngine
     {
         if (!_initialized)
         {
-            throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, "Web3WalletEngine");
+            throw new InvalidOperationException($"{nameof(Web3WalletEngine)} module not initialized.");
         }
     }
 
@@ -210,25 +210,16 @@ public class Web3WalletEngine : IWeb3WalletEngine
 
     void OnAuthRequest(object sender, AuthRequest request)
     {
-        if (AuthRequested != null)
-        {
-            AuthRequested(sender, request);
-        }
+        AuthRequested?.Invoke(sender, request);
     }
 
     void OnAuthResponse(object sender, AuthErrorResponse errorResponse)
     {
-        if (AuthError != null)
-        {
-            AuthError(sender, errorResponse);
-        }
+        AuthError?.Invoke(sender, errorResponse);
     }
 
     void OnAuthResponse(object sender, AuthResponse response)
     {
-        if (AuthResponded != null)
-        {
-            AuthResponded(sender, response);
-        }
+        AuthResponded?.Invoke(sender, response);
     }
 }

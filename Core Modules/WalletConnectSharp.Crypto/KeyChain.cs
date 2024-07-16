@@ -126,23 +126,15 @@ namespace WalletConnectSharp.Crypto
         }
 
         /// <summary>
-        /// Get a saved key with the given tag. If no tag exists, then a WalletConnectException will
-        /// be thrown.
+        /// Get a saved key with the given tag.
         /// </summary>
         /// <param name="tag">The tag of the key to retrieve</param>
         /// <returns>The key with the given tag</returns>
-        /// <exception cref="WalletConnectException">Thrown if the given tag does not match any key</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the given tag does not match any key</exception>
         public async Task<string> Get(string tag)
         {
-            this.IsInitialized();
-
-            if (!await Has(tag))
-            {
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, new Dictionary<string, object>()
-                {
-                    {"tag", tag}
-                });
-            }
+            IsInitialized();
+            await DoesTagExist(tag);
 
             return this._keyChain[tag];
         }
@@ -152,32 +144,29 @@ namespace WalletConnectSharp.Crypto
         /// be thrown.
         /// </summary>
         /// <param name="tag">The tag of the key to delete</param>
-        /// <exception cref="WalletConnectException">Thrown if the given tag does not match any key</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the given tag does not match any key</exception>
         public async Task Delete(string tag)
         {
-            this.IsInitialized();
-            
-            if (!await Has(tag))
-            {
-                throw WalletConnectException.FromType(ErrorType.NO_MATCHING_KEY, new Dictionary<string, object>()
-                {
-                    {"tag", tag}
-                });
-            }
+            IsInitialized();
+            await DoesTagExist(tag);
 
             _keyChain.Remove(tag);
-
             await this.SaveKeyChain();
+        }
+
+        private async Task DoesTagExist(string tag)
+        {
+            if (!await Has(tag))
+            {
+                throw new InvalidOperationException($"Keychain does not contain key with tag: {tag}.");
+            }
         }
 
         private void IsInitialized()
         {
             if (!this._initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, new Dictionary<string, object>()
-                {
-                    {"Name", Name}
-                });
+                throw new InvalidOperationException($"{nameof(Keychain)} module not initialized.");
             }
         }
         

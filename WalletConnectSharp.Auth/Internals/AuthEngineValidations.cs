@@ -24,7 +24,7 @@ public partial class AuthEngine : IAuthEngine
         var expiry = @params.Expiry;
         if (expiry != null && !Utils.IsValidRequestExpiry(expiry.Value, MinExpiry, MaxExpiry))
         {
-            throw WalletConnectException.FromType(ErrorType.MISSING_OR_INVALID, $"request() expiry: {expiry}. Expiry must be a number (in seconds) between {MinExpiry} and {MaxExpiry}");
+            throw new ArgumentException($"Request expiry: {expiry}. Expiry must be a number (in seconds) between {MinExpiry} and {MaxExpiry}");
         }
 
         return validAudience && domainInAud && hasNonce && hasValidType;

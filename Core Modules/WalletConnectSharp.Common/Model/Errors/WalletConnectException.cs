@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
-using WalletConnectSharp.Common.Utils;
 
 namespace WalletConnectSharp.Common.Model.Errors
 {
@@ -18,7 +15,7 @@ namespace WalletConnectSharp.Common.Model.Errors
         public uint Code { get; private set; }
         
         /// <summary>
-        /// The error tyep of this exception
+        /// The error type of this exception
         /// </summary>
         [JsonProperty("type")]
         public string Type { get; private set; }
@@ -64,29 +61,17 @@ namespace WalletConnectSharp.Common.Model.Errors
         /// exception
         /// </summary>
         /// <param name="type">The error type of the exception</param>
-        /// <param name="message">The message parameter</param>
-        /// <param name="params">Additional (optional) parameters for the generated error message</param>
+        /// <param name="message">An (optional) message for the error</param>
+        /// <param name="context">An (optional) context for the error message</param>
         /// <param name="innerException">An (optional) inner exception that caused this exception</param>
         /// <returns>A new exception</returns>
-        public static WalletConnectException FromType(ErrorType type, string message = null, Dictionary<string, object> @params = null, Exception innerException = null)
+        public static WalletConnectException FromType(ErrorType type, string message = null, string context = null, Exception innerException = null)
         {
-            string errorMessage = SdkErrors.MessageFromType(type, message, @params);
+            var errorMessage = message ?? SdkErrors.MessageFromType(type, context);
 
-            if (innerException != null)
-                return new WalletConnectException(errorMessage, innerException, type);
-            return new WalletConnectException(errorMessage, type);
-        }
-
-        /// <summary>
-        /// A helper function that creates an exception given an ErrorType, and
-        /// an (optional) dictionary of parameters for the error message
-        /// </summary>
-        /// <param name="type">The error type of the exception</param>
-        /// <param name="params">Additional (optional) parameters for the generated error message</param>
-        /// <returns>A new exception</returns>
-        public static WalletConnectException FromType(ErrorType type, Dictionary<string, object> @params = null)
-        {
-            return FromType(type, null, @params);
+            return innerException != null
+                ? new WalletConnectException(errorMessage, innerException, type)
+                : new WalletConnectException(errorMessage, type);
         }
     }
 }

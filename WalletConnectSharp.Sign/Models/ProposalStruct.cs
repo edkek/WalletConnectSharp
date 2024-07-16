@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using WalletConnectSharp.Common.Model.Errors;
 using WalletConnectSharp.Core.Interfaces;
@@ -29,14 +25,8 @@ namespace WalletConnectSharp.Sign.Models
         /// so this struct can be stored using <see cref="IStore{TKey,TValue}"/>
         /// </summary>
         [JsonIgnore]
-        public long Key
-        {
-            get
-            {
-                return (long) Id;
-            }
-        }
-        
+        public long Key => Id;
+
         /// <summary>
         /// When this proposal expires
         /// </summary>
@@ -106,14 +96,23 @@ namespace WalletConnectSharp.Sign.Models
         /// <param name="protocolOption">(optional) The protocol option to use. If left null, then the first protocol
         /// option in this proposal will be chosen.</param>
         /// <returns>The <see cref="ApproveParams"/> that can be given to <see cref="IEngineAPI.Approve(ApproveParams)"/></returns>
+        /// <exception cref="InvalidOperationException">If this proposal has no Id</exception>
+        /// <exception cref="InvalidOperationException">If the requested protocol option does not exist in this proposal</exception>
         public ApproveParams ApproveProposal(string[] approvedAccounts, ProtocolOptions protocolOption = null)
         {
-            if (Id == null)
-                throw new Exception("Proposal has no set Id");
+            if (Id == default)
+            {
+                throw new InvalidOperationException("Proposal has no Id.");
+            }
+
             if (protocolOption == null)
+            {
                 protocolOption = Relays[0];
-            else if (Relays.All(r => r.Protocol != protocolOption.Protocol))
-                throw new Exception("Requested protocol not in proposal");
+            }
+            else if (Array.TrueForAll(Relays, r => r.Protocol != protocolOption.Protocol))
+            {
+                throw new InvalidOperationException("Requested protocol option does not exist in this proposal.");
+            }
 
             var relayProtocol = protocolOption.Protocol;
 
@@ -164,13 +163,18 @@ namespace WalletConnectSharp.Sign.Models
         /// </summary>
         /// <param name="error">The error reason this proposal was rejected</param>
         /// <returns>A new <see cref="RejectParams"/> object which must be used in <see cref="IEngineAPI.Reject(RejectParams)"/></returns>
-        /// <exception cref="Exception">If this proposal has no Id</exception>
+        /// <exception cref="InvalidOperationException">If this proposal has no Id</exception>
         public RejectParams RejectProposal(Error error)
         {
-            if (Id == null)
-                throw new Exception("Proposal has no set Id");
+            if (Id == default)
+            {
+                throw new InvalidOperationException("Proposal has no Id.");
+            }
 
-            return new RejectParams() {Id = Id, Reason = error};
+            return new RejectParams
+            {
+                Id = Id, Reason = error
+            };
         }
 
         /// <summary>

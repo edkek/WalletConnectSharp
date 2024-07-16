@@ -1,7 +1,4 @@
-using System;
-using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
-using WalletConnectSharp.Common;
 using WalletConnectSharp.Common.Model.Errors;
 
 namespace WalletConnectSharp.Network.Models
@@ -28,30 +25,19 @@ namespace WalletConnectSharp.Network.Models
         /// </summary>
         [JsonProperty("data")]
         public string Data;
-        
-        /// <summary>
-        /// Create an ErrorResponse with a given ErrorType and (optional) parameters
-        /// </summary>
-        /// <param name="type">The error type of the ErrorResponse to create</param>
-        /// <param name="message">The message to attach to the error</param>
-        /// <returns>A new ErrorResponse</returns>
-        public static Error FromErrorType(ErrorType type, string message)
-        {
-            return FromErrorType(type, new Dictionary<string, object>() { { "message", message } });
-        }
 
         /// <summary>
         /// Create an ErrorResponse with a given ErrorType and (optional) parameters
         /// </summary>
         /// <param name="type">The error type of the ErrorResponse to create</param>
-        /// <param name="params">Extra parameters for the error message</param>
+        /// <param name="context">Extra context</param>
         /// <param name="extraData">Extra data that is stored in the Data field of the newly created ErrorResponse</param>
         /// <returns>A new ErrorResponse</returns>
-        public static Error FromErrorType(ErrorType type, Dictionary<string, object> @params = null, string extraData = null)
+        public static Error FromErrorType(ErrorType type, string context = null, string extraData = null)
         {
-            string message = SdkErrors.MessageFromType(type, @params);
+            var message = SdkErrors.MessageFromType(type, context);
 
-            return new Error()
+            return new Error
             {
                 Code = (long) type,
                 Message = message,
@@ -66,7 +52,7 @@ namespace WalletConnectSharp.Network.Models
         /// <returns>A new ErrorResponse object using values from the given exception</returns>
         public static Error FromException(WalletConnectException walletConnectException)
         {
-            return new Error()
+            return new Error
             {
                 Code = walletConnectException.Code,
                 Message = walletConnectException.Message,

@@ -45,8 +45,6 @@ namespace WalletConnectSharp.Sign.Interfaces
 
         internal Task IsValidConnect(ConnectOptions options);
 
-        internal Task IsValidPair(string uri);
-
         internal Task IsValidSessionSettleRequest(SessionSettle settle);
 
         internal Task IsValidApprove(ApproveParams @params);

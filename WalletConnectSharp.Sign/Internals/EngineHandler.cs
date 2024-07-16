@@ -21,7 +21,7 @@ namespace WalletConnectSharp.Sign
             if (target.Id != null && this.Client.PendingRequests.Keys.Contains((long)target.Id))
             {
                 await PrivateThis.DeletePendingSessionRequest((long)target.Id,
-                    Error.FromErrorType(ErrorType.EXPIRED), true);
+                    Error.FromErrorType(ErrorType.SESSION_REQUEST_EXPIRED), true);
                 return;
             }
 

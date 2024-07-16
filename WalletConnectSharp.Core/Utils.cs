@@ -27,6 +27,23 @@ public static class Utils
         return SessionIdRegex.IsMatch(chainId);
     }
 
+    public static bool IsValidAccountId(string account)
+    {
+        if (string.IsNullOrWhiteSpace(account) || !account.Contains(':'))
+        {
+            return false;
+        }
+
+        var split = account.Split(":");
+        if (split.Length != 3)
+        {
+            return false;
+        }
+
+        var chainId = split[0] + ":" + split[1];
+        return !string.IsNullOrWhiteSpace(split[2]) && IsValidChainId(chainId);
+    }
+
     public static bool IsValidRequestExpiry(long expiry, long min, long max)
     {
         return expiry <= max && expiry >= min;

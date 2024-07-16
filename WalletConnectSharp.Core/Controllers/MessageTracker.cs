@@ -202,7 +202,7 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!initialized)
             {
-                throw WalletConnectException.FromType(ErrorType.NOT_INITIALIZED, this.Name);
+                throw new InvalidOperationException($"{nameof(MessageTracker)} module not initialized.");
             }
         }
 
