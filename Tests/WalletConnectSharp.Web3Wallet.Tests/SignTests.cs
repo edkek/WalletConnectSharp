@@ -580,6 +580,10 @@ namespace WalletConnectSharp.Web3Wallet.Tests
 
             Assert.True(_dapp.TryUnsubscribeFromSessionEvent(referenceTypeEventData.Name, ReferenceTypeEventHandler));
             Assert.True(_dapp.TryUnsubscribeFromSessionEvent(valueTypeEventData.Name, ValueTypeEventHandler));
+
+            // Test invalid chains
+            await Assert.ThrowsAsync<FormatException>(() => _wallet.EmitSessionEvent(session.Topic, valueTypeEventData, "invalid chain"));
+            await Assert.ThrowsAsync<NamespacesException>(() => _wallet.EmitSessionEvent(session.Topic, valueTypeEventData, "123:321"));
         }
 
         [Fact, Trait("Category", "unit")]
