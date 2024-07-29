@@ -7,6 +7,7 @@ using WalletConnectSharp.Common.Logging;
 using WalletConnectSharp.Common.Model.Errors;
 using WalletConnectSharp.Common.Model.Relay;
 using WalletConnectSharp.Common.Utils;
+using WalletConnectSharp.Core;
 using WalletConnectSharp.Core.Interfaces;
 using WalletConnectSharp.Core.Models;
 using WalletConnectSharp.Core.Models.Pairing;
@@ -818,6 +819,7 @@ namespace WalletConnectSharp.Sign
         public async Task Emit<T>(string topic, EventData<T> eventData, string chainId = null)
         {
             IsInitialized();
+            await PrivateThis.IsValidEmit(topic, eventData, chainId);
             await MessageHandler.SendRequest<SessionEvent<T>, object>(topic,
                 new SessionEvent<T> { ChainId = chainId, Event = eventData, Topic = topic });
         }

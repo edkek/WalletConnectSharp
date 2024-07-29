@@ -344,7 +344,7 @@ namespace WalletConnectSharp.Sign
         {
             if (!Utils.IsValidChainId(chainId))
             {
-                throw new FormatException($"ChainId {chainId} should be a string and conform to 'chainId:chainId' format.");
+                throw new FormatException($"ChainId {chainId} should be a string and conform to CAIP-2.");
             }
 
             var chains = GetNamespacesChains(namespaces);
