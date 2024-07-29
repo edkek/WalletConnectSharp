@@ -352,6 +352,10 @@ namespace WalletConnectSharp.Sign
             {
                 await MessageHandler.SendError<SessionEvent<JToken>, bool>(id, topic, Error.FromException(e));
             }
+            catch (Exception e) // to avoid unhandled exceptions caused by invalid events sent by another peer
+            {
+                logger.LogError(e);
+            }
         }
     }
 }
