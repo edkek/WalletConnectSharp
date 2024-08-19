@@ -276,22 +276,6 @@ namespace WalletConnectSharp.Core.Controllers
             this.Resubscribed?.Invoke(this, EventArgs.Empty);
         }
 
-        protected virtual async Task Resubscribe(ActiveSubscription subscription)
-        {
-            if (!Ids.Contains(subscription.Id))
-            {
-                var @params = new PendingSubscription() { Relay = subscription.Relay, Topic = subscription.Topic };
-
-                if (pending.ContainsKey(@params.Topic))
-                    pending.Remove(@params.Topic);
-
-                pending.Add(@params.Topic, @params);
-
-                var id = await RpcSubscribe(@params.Topic, @params.Relay);
-                OnResubscribe(id, @params);
-            }
-        }
-
         protected virtual async Task<string> RpcSubscribe(string topic, ProtocolOptions relay)
         {
             var api = RelayProtocols.GetRelayProtocol(relay.Protocol);
