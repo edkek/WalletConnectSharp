@@ -277,7 +277,11 @@ namespace WalletConnectSharp.Core.Controllers
 
         protected virtual async Task<bool> ShouldIgnoreMessageEvent(MessageEvent messageEvent)
         {
-            if (!(await Subscriber.IsSubscribed(messageEvent.Topic))) return true;
+            var isSubscribed = await Subscriber.IsSubscribed(messageEvent.Topic);
+            if (!isSubscribed)
+            {
+                return true;
+            }
 
             var exists = Messages.Has(messageEvent.Topic, messageEvent.Message);
             return exists;

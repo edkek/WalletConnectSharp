@@ -71,7 +71,8 @@ namespace WalletConnectSharp.Core.Interfaces
         /// Determines whether the given topic is subscribed or not
         /// </summary>
         /// <param name="topic">The topic to check</param>
+        /// /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>Return true if the topic is subscribed, false otherwise</returns>
-        public Task<bool> IsSubscribed(string topic);
+        public Task<bool> IsSubscribed(string topic, CancellationToken cancellationToken = default);
     }
 }
