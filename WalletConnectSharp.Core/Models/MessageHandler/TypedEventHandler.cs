@@ -218,7 +218,6 @@ namespace WalletConnectSharp.Sign.Models
 
         protected virtual Task ResponseCallback(string arg1, JsonRpcResponse<TR> arg2)
         {
-            WCLogger.Log($"Got generic response for type {typeof(TR)}");
             var rea = new ResponseEventArgs<TR>(arg2, arg1);
             return ResponsePredicate != null && !ResponsePredicate(rea) ? Task.CompletedTask :
                 _onResponse != null ? _onResponse(rea) : Task.CompletedTask;

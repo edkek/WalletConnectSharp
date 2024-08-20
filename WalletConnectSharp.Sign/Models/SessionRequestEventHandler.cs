@@ -75,7 +75,6 @@ namespace WalletConnectSharp.Sign.Models
 
         private Task WrappedRefOnOnResponse(ResponseEventArgs<TR> e)
         {
-            WCLogger.Log($"Got response for type {typeof(TR)}");
             return base.ResponseCallback(e.Topic, e.Response);
         }
 
