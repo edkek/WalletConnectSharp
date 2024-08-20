@@ -1,3 +1,4 @@
+using WalletConnectSharp.Common.Logging;
 using WalletConnectSharp.Core.Interfaces;
 
 namespace WalletConnectSharp.Core.Controllers
@@ -76,7 +77,14 @@ namespace WalletConnectSharp.Core.Controllers
             {
                 while (!token.IsCancellationRequested)
                 {
-                    Pulse();
+                    try
+                    {
+                        Pulse();
+                    }
+                    catch (Exception ex)
+                    {
+                        WCLogger.LogError(ex);
+                    }
 
                     await Task.Delay(Interval, token);
                 }

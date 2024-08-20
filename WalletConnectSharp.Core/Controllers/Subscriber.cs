@@ -276,22 +276,6 @@ namespace WalletConnectSharp.Core.Controllers
             this.Resubscribed?.Invoke(this, EventArgs.Empty);
         }
 
-        protected virtual async Task Resubscribe(ActiveSubscription subscription)
-        {
-            if (!Ids.Contains(subscription.Id))
-            {
-                var @params = new PendingSubscription() { Relay = subscription.Relay, Topic = subscription.Topic };
-
-                if (pending.ContainsKey(@params.Topic))
-                    pending.Remove(@params.Topic);
-
-                pending.Add(@params.Topic, @params);
-
-                var id = await RpcSubscribe(@params.Topic, @params.Relay);
-                OnResubscribe(id, @params);
-            }
-        }
-
         protected virtual async Task<string> RpcSubscribe(string topic, ProtocolOptions relay)
         {
             var api = RelayProtocols.GetRelayProtocol(relay.Protocol);
@@ -522,31 +506,43 @@ namespace WalletConnectSharp.Core.Controllers
         /// Determines whether the given topic is subscribed or not
         /// </summary>
         /// <param name="topic">The topic to check</param>
+        /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>Return true if the topic is subscribed, false otherwise</returns>
-        public Task<bool> IsSubscribed(string topic)
+        public async Task<bool> IsSubscribed(string topic, CancellationToken cancellationToken = default)
         {
-            if (Topics.Contains(topic)) return Task.FromResult(true);
-
-            return Task.Run(async delegate()
+            if (Topics.Contains(topic))
             {
-                var startTime = DateTimeOffset.Now.ToUnixTimeSeconds();
+                return true;
+            }
 
-                while (true)
+            var startTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            const int timeoutMilliseconds = 5_000;
+            const int delayMilliseconds = 20;
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
                 {
                     if (!pending.ContainsKey(topic) && Topics.Contains(topic))
                     {
                         return true;
                     }
 
-                    var currentTime = DateTimeOffset.Now.ToUnixTimeSeconds();
-                    if (currentTime - startTime >= 5)
+                    var elapsedMilliseconds = DateTimeOffset.Now.ToUnixTimeMilliseconds() - startTime;
+                    if (elapsedMilliseconds >= timeoutMilliseconds)
                     {
                         return false;
                     }
 
-                    await Task.Delay(20);
+                    await Task.Delay(delayMilliseconds, cancellationToken);
                 }
-            });
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+
+            return false;
         }
 
         protected virtual async Task<string[]> RpcBatchSubscribe(string[] topics, ProtocolOptions relay)
