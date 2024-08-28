@@ -99,17 +99,7 @@ namespace WalletConnectSharp.Core.Controllers
             }
 
             _isRequestQueueProcessing = true;
-
-            WCLogger.Log($"Processing request queue with {_requestQueue.Count} items.");
-
-            var methods = "";
-            foreach (var (method, _) in _requestQueue)
-            {
-                methods += method + ", ";
-            }
-
-            WCLogger.Log($"Queue methods: [{methods}]");
-
+            
             try
             {
                 while (_requestQueue.Count > 0)
@@ -130,8 +120,6 @@ namespace WalletConnectSharp.Core.Controllers
                         {
                             WCLogger.LogError(e);
                         }
-
-                        WCLogger.Log($"Request callback for method {method} processed");
                     }
                 }
             }
