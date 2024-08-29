@@ -342,8 +342,8 @@ namespace WalletConnectSharp.Sign
                 var eventData = @params.Event;
                 var eventName = eventData.Name;
 
-                await PrivateThis.IsValidEmit(topic, eventData, @params.ChainId);
-
+                await IsValidSessionTopic(topic);
+                
                 _customSessionEventsHandlerMap[eventName]?.Invoke(this, @params);
 
                 await MessageHandler.SendResult<SessionEvent<EventData<JToken>>, bool>(id, topic, true);

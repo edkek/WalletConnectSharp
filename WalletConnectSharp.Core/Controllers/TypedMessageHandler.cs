@@ -1,8 +1,5 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using Newtonsoft.Json;
-using WalletConnectSharp.Common.Events;
-using WalletConnectSharp.Common.Model.Errors;
+﻿using Newtonsoft.Json;
+using WalletConnectSharp.Common.Logging;
 using WalletConnectSharp.Common.Utils;
 using WalletConnectSharp.Core.Interfaces;
 using WalletConnectSharp.Core.Models;
@@ -15,12 +12,18 @@ namespace WalletConnectSharp.Core.Controllers
 {
     public class TypedMessageHandler : ITypedMessageHandler
     {
-        private bool _initialized = false;
-        private Dictionary<string, DecodeOptions> _decodeOptionsMap = new Dictionary<string, DecodeOptions>();
-        private HashSet<string> _typeSafeCache = new HashSet<string>();
+        private bool _initialized;
+        private bool _isRequestQueueProcessing;
+
+        private readonly Dictionary<string, DecodeOptions> _decodeOptionsMap = new();
+
+        private readonly HashSet<string> _typeSafeCache = [];
+
+        private readonly Queue<(string method, MessageEvent messageEvent)> _requestQueue = new();
+        private readonly Dictionary<string, List<Func<MessageEvent, Task>>> _requestCallbacksMap = new();
+        private readonly Dictionary<string, List<Action<MessageEvent>>> _responseCallbacksMap = new();
 
         public event EventHandler<DecodedMessageEvent> RawMessage;
-        private EventHandlerMap<MessageEvent> messageEventHandlerMap = new();
 
         protected bool Disposed;
 
@@ -57,29 +60,69 @@ namespace WalletConnectSharp.Core.Controllers
         {
             if (!_initialized)
             {
-                this.Core.Relayer.OnMessageReceived += RelayerMessageCallback;
+                Core.Relayer.OnMessageReceived += RelayMessageCallback;
             }
 
             _initialized = true;
             return Task.CompletedTask;
         }
 
-        async void RelayerMessageCallback(object sender, MessageEvent e)
+        private async void RelayMessageCallback(object sender, MessageEvent e)
         {
             var topic = e.Topic;
             var message = e.Message;
+
 
             var options = DecodeOptionForTopic(topic);
 
             var payload = await this.Core.Crypto.Decode<JsonRpcPayload>(topic, message, options);
             if (payload.IsRequest)
             {
-                messageEventHandlerMap[$"request_{payload.Method}"](this, e);
+                _requestQueue.Enqueue((payload.Method, e));
+                await ProcessRequestQueue();
             }
             else if (payload.IsResponse)
             {
                 this.RawMessage?.Invoke(this,
                     new DecodedMessageEvent() { Topic = topic, Message = message, Payload = payload });
+            }
+        }
+
+        private async Task ProcessRequestQueue()
+        {
+            if (_isRequestQueueProcessing)
+            {
+                return;
+            }
+
+            _isRequestQueueProcessing = true;
+            
+            try
+            {
+                while (_requestQueue.Count > 0)
+                {
+                    var (method, messageEvent) = _requestQueue.Dequeue();
+                    if (!_requestCallbacksMap.TryGetValue(method, out var callbacks))
+                    {
+                        continue;
+                    }
+
+                    foreach (var callback in callbacks)
+                    {
+                        try
+                        {
+                            await callback(messageEvent);
+                        }
+                        catch (Exception e)
+                        {
+                            WCLogger.LogError(e);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _isRequestQueueProcessing = false;
             }
         }
 
@@ -97,7 +140,7 @@ namespace WalletConnectSharp.Core.Controllers
             var method = RpcMethodAttribute.MethodForType<T>();
             var rpcHistory = await this.Core.History.JsonRpcHistoryOfType<T, TR>();
 
-            async void RequestCallback(object sender, MessageEvent e)
+            async Task RequestCallback(MessageEvent e)
             {
                 try
                 {
@@ -128,7 +171,7 @@ namespace WalletConnectSharp.Core.Controllers
                 }
             }
 
-            async void ResponseCallback(object sender, MessageEvent e)
+            async void ResponseCallback(MessageEvent e)
             {
                 if (responseCallback == null || Disposed)
                 {
@@ -184,15 +227,36 @@ namespace WalletConnectSharp.Core.Controllers
                 var resMethod = record.Request.Method;
 
                 // Trigger the true response event, which will trigger ResponseCallback
-                messageEventHandlerMap[$"response_{resMethod}"](this,
-                    new MessageEvent
+
+                if (_responseCallbacksMap.TryGetValue(resMethod, out var callbacks))
+                {
+                    var callbacksCopy = callbacks.ToList();
+                    foreach (var callback in callbacksCopy)
                     {
-                        Topic = topic, Message = message
-                    });
+                        callback(new MessageEvent
+                        {
+                            Topic = topic, Message = message
+                        });
+                    }
+                }
             }
 
-            messageEventHandlerMap[$"request_{method}"] += RequestCallback;
-            messageEventHandlerMap[$"response_{method}"] += ResponseCallback;
+            if (!_requestCallbacksMap.TryGetValue(method, out var requestCallbacks))
+            {
+                requestCallbacks = [];
+                _requestCallbacksMap.Add(method, requestCallbacks);
+            }
+
+            requestCallbacks.Add(RequestCallback);
+
+
+            if (!_responseCallbacksMap.TryGetValue(method, out var responseCallbacks))
+            {
+                responseCallbacks = [];
+                _responseCallbacksMap.Add(method, responseCallbacks);
+            }
+
+            responseCallbacks.Add(ResponseCallback);
 
             // Handle response_raw in this context
             // This will allow us to examine response_raw in every typed context registered
@@ -202,8 +266,8 @@ namespace WalletConnectSharp.Core.Controllers
             {
                 this.RawMessage -= InspectResponseRaw;
 
-                messageEventHandlerMap[$"request_{method}"] -= RequestCallback;
-                messageEventHandlerMap[$"response_{method}"] -= ResponseCallback;
+                _requestCallbacksMap[method].Remove(RequestCallback);
+                _responseCallbacksMap[method].Remove(ResponseCallback);
             });
         }
 
@@ -429,7 +493,7 @@ namespace WalletConnectSharp.Core.Controllers
 
             if (disposing)
             {
-                this.Core.Relayer.OnMessageReceived -= RelayerMessageCallback;
+                Core.Relayer.OnMessageReceived -= RelayMessageCallback;
             }
 
             Disposed = true;
