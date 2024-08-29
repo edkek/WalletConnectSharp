@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Newtonsoft.Json;
-using WalletConnectSharp.Common.Events;
+﻿using Newtonsoft.Json;
 using WalletConnectSharp.Common.Logging;
 using WalletConnectSharp.Common.Utils;
 using WalletConnectSharp.Core.Interfaces;
@@ -21,7 +19,6 @@ namespace WalletConnectSharp.Core.Controllers
 
         private readonly HashSet<string> _typeSafeCache = [];
 
-        // private readonly EventHandlerMap<MessageEvent> _messageEventHandlerMap = new();
         private readonly Queue<(string method, MessageEvent messageEvent)> _requestQueue = new();
         private readonly Dictionary<string, List<Func<MessageEvent, Task>>> _requestCallbacksMap = new();
         private readonly Dictionary<string, List<Action<MessageEvent>>> _responseCallbacksMap = new();
@@ -269,10 +266,8 @@ namespace WalletConnectSharp.Core.Controllers
             {
                 this.RawMessage -= InspectResponseRaw;
 
-                // TODO: dispose maps
-
-                // _messageEventHandlerMap[$"request_{method}"] -= RequestCallback;
-                // _messageEventHandlerMap[$"response_{method}"] -= ResponseCallback;
+                _requestCallbacksMap[method].Remove(RequestCallback);
+                _responseCallbacksMap[method].Remove(ResponseCallback);
             });
         }
 
