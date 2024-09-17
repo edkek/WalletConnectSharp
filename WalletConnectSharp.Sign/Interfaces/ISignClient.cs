@@ -9,6 +9,7 @@ namespace WalletConnectSharp.Sign.Interfaces
     /// An interface for the Sign Client. This includes modules the Sign Client will use, the ICore module
     /// this Sign Client is using, as well as public facing Engine functions and properties.
     /// </summary>
+    [Obsolete("WalletConnectSharp is now considered deprecated and will reach End-of-Life on February 17th 2025. For more details, including migration guides please see: https://docs.reown.com")]
     public interface ISignClient : IModule, IEngineAPI
     {
         /// <summary>

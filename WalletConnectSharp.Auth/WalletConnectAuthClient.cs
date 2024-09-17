@@ -7,6 +7,7 @@ using WalletConnectSharp.Core.Interfaces;
 
 namespace WalletConnectSharp.Auth;
 
+[Obsolete("WalletConnectSharp is now considered deprecated and will reach End-of-Life on February 17th 2025. For more details, including migration guides please see: https://docs.reown.com")]
 public class WalletConnectAuthClient : IAuthClient
 {
     public const string AUTH_CLIENT_PROTOCOL = AuthEngine.AUTH_CLIENT_PROTOCOL;

@@ -9,6 +9,7 @@ namespace WalletConnectSharp.Core.Interfaces
     /// <summary>
     /// Represents the Core module and all fields the Core module will have
     /// </summary>
+    [Obsolete("WalletConnectSharp is now considered deprecated and will reach End-of-Life on February 17th 2025. For more details, including migration guides please see: https://docs.reown.com")]
     public interface ICore : IModule
     {
         /// <summary>
