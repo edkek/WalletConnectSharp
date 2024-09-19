@@ -24,7 +24,7 @@ namespace WalletConnectSharp.Crypto
         public IReadOnlyDictionary<string, string> Keychain => new ReadOnlyDictionary<string, string>(_keyChain);
         
         /// <summary>
-        /// The name of this module, always "keychain"
+        /// The name of this module, is always "keychain"
         /// </summary>
         public string Name
         {
