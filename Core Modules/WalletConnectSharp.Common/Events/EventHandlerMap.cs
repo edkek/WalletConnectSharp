@@ -1,7 +1,7 @@
 ﻿namespace WalletConnectSharp.Common.Events;
 
 /// <summary>
-/// A mapping of eventIds to EventHandler objects. This using a Dictionary as the backing datastore
+/// A mapping of eventIds to EventHandler objects. This uses a Dictionary as the backing datastore
 /// </summary>
 /// <typeparam name="TEventArgs">The type of EventHandler's argument to store</typeparam>
 public class EventHandlerMap<TEventArgs> : IDisposable
